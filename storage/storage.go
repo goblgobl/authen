@@ -1,6 +1,8 @@
 package storage
 
 import (
+	"time"
+
 	"src.goblgobl.com/authen/codes"
 	"src.goblgobl.com/authen/storage/data"
 	"src.goblgobl.com/authen/storage/pg"
@@ -22,6 +24,8 @@ type Storage interface {
 	EnsureMigrations() error
 
 	GetProject(id string) (*data.Project, error)
+
+	GetUpdatedProjects(timestamp time.Time) ([]*data.Project, error)
 }
 
 func Configure(config typed.Typed) (err error) {

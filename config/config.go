@@ -12,11 +12,12 @@ import (
 )
 
 type Config struct {
-	InstanceId uint8             `json:"instance_id"`
-	HTTP       HTTP              `json:"http"`
-	Log        log.Config        `json:"log"`
-	Storage    typed.Typed       `json:"storage"`
-	Validation validation.Config `json:"validation"`
+	InstanceId             uint8             `json:"instance_id"`
+	HTTP                   HTTP              `json:"http"`
+	Log                    log.Config        `json:"log"`
+	Storage                typed.Typed       `json:"storage"`
+	Validation             validation.Config `json:"validation"`
+	ProjectUpdateFrequency uint16            `json:"project_update_frequency"`
 }
 
 type HTTP struct {

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"src.goblgobl.com/authen/storage"
+	"src.goblgobl.com/authen/storage/data"
 	"src.goblgobl.com/utils"
 	"src.goblgobl.com/utils/concurrent"
 	"src.goblgobl.com/utils/log"
@@ -45,19 +46,23 @@ func loadProject(id string) (*Project, error) {
 	if projectData == nil || err != nil {
 		return nil, err
 	}
+	return createProjectFromProjectData(projectData), nil
+}
+
+func createProjectFromProjectData(projectData *data.Project) *Project {
+	id := projectData.Id
 
 	return &Project{
-		Id: id,
-
-		Capabilities: ProjectCapabilities{
-			MaxUsers: projectData.MaxUsers,
-		},
-
+		Id:       id,
 		logField: log.NewField().String("pid", id).Finalize(),
 
 		// If we let this start at 0, then restarts are likely to produce duplicates.
 		// While we make no guarantees about the uniqueness of the requestId, there's
 		// no reason we can't help things out a little.
 		requestId: uint32(time.Now().Unix()),
-	}, nil
+
+		Capabilities: ProjectCapabilities{
+			MaxUsers: projectData.MaxUsers,
+		},
+	}
 }
