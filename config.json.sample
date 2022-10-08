@@ -1,0 +1,9 @@
+{
+	"log": {
+		"level": "warn"
+	},
+	"storage": {
+		"type": "pg",
+		"url": "postgres://localhost:5432/gobl_test"
+	}
+}

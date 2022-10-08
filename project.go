@@ -1,0 +1,63 @@
+package authen
+
+import (
+	"sync/atomic"
+	"time"
+
+	"src.goblgobl.com/authen/storage"
+	"src.goblgobl.com/utils"
+	"src.goblgobl.com/utils/concurrent"
+	"src.goblgobl.com/utils/log"
+)
+
+var Projects concurrent.Map[*Project]
+
+func init() {
+	Projects = concurrent.NewMap[*Project](loadProject)
+}
+
+type ProjectCapabilities struct {
+	MaxUsers uint32 `json:"max_users"`
+}
+
+// A project instance isn't updated. If the project is changed,
+// a new instance is created.
+type Project struct {
+	// Project-specific counter for generating the RequestId
+	requestId uint32
+
+	// Any log entry generate for this project should include
+	// the pid=$id field
+	logField log.Field
+
+	Id string
+
+	Capabilities ProjectCapabilities
+}
+
+func (p *Project) NextRequestId() string {
+	nextId := atomic.AddUint32(&p.requestId, 1)
+	return utils.EncodeRequestId(nextId, InstanceId)
+}
+
+func loadProject(id string) (*Project, error) {
+	projectData, err := storage.DB.GetProject(id)
+	if projectData == nil || err != nil {
+		return nil, err
+	}
+
+	return &Project{
+		Id: id,
+
+		Capabilities: ProjectCapabilities{
+			MaxUsers: projectData.MaxUsers,
+		},
+
+		logField: log.NewField().String("pid", id).Finalize(),
+
+		// If we let this start at 0, then restarts are likely to produce duplicates.
+		// While we make no guarantees about the uniqueness of the requestId, there's
+		// no reason we can't help things out a little.
+		requestId: uint32(time.Now().Unix()),
+	}, nil
+}
