@@ -1,6 +1,7 @@
 package authen
 
 import (
+	"fmt"
 	"time"
 
 	"src.goblgobl.com/authen/config"
@@ -28,17 +29,22 @@ func reloadUpdatedProjects(seconds time.Duration) {
 	for {
 		time.Sleep(seconds)
 		now := time.Now()
-		updatedProjects, err := storage.DB.GetUpdatedProjects(lastChecked)
-		if err != nil {
-			log.Error("reload_projects").Err(err).Log()
-			continue
-		}
-
-		for _, projectData := range updatedProjects {
-			project := createProjectFromProjectData(projectData)
-			Projects.Put(project.Id, project)
-		}
-
+		updateProjectsUpdatedSince(lastChecked)
 		lastChecked = now
+	}
+}
+
+// extracted from reloadUpdatedProjects so we can test it...*eyeroll*
+func updateProjectsUpdatedSince(t time.Time) {
+	updatedProjects, err := storage.DB.GetUpdatedProjects(t)
+	if err != nil {
+		log.Error("reload_projects").Err(err).Log()
+		return
+	}
+
+	for _, data := range updatedProjects {
+		fmt.Println(data.Id)
+		project := createProjectFromProjectData(data)
+		Projects.Put(project.Id, project)
 	}
 }

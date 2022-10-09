@@ -1,6 +1,8 @@
 package tests
 
 import (
+	"time"
+
 	"src.goblgobl.com/authen/storage"
 	f "src.goblgobl.com/tests/factory"
 	"src.goblgobl.com/utils/uuid"
@@ -23,6 +25,8 @@ func init() {
 		return f.KV{
 			"id":        args.UUID("id", uuid.String()),
 			"max_users": args.Int("max_users", 100),
+			"created":   args.Time("created", time.Now()),
+			"updated":   args.Time("updated", time.Now()),
 		}
 	})
 }

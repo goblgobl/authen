@@ -56,18 +56,16 @@ func (c Conn) GetProject(id string) (*data.Project, error) {
 }
 
 func (c Conn) GetUpdatedProjects(timestamp time.Time) ([]*data.Project, error) {
-	unix := timestamp.Unix()
-
 	// Not sure fetching the count upfront really makes much sense.
 	// But we do expect this to be 0 almost every time that it's called, so most
 	// of the time we're going to be doing a single DB call (either to get the count
 	// which returns 0, or to get an empty result set).
-	count, err := sqlite.Scalar[int](c.Conn, "select count(*) from authen_projects where updated > ?1", unix)
+	count, err := sqlite.Scalar[int](c.Conn, "select count(*) from authen_projects where updated > ?1", timestamp)
 	if count == 0 || err != nil {
 		return nil, err
 	}
 
-	rows := c.Rows("select id, max_users from authen_projects where updated > ?1", unix)
+	rows := c.Rows("select id, max_users from authen_projects where updated > ?1", timestamp)
 	defer rows.Close()
 
 	projects := make([]*data.Project, 0, count)

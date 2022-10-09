@@ -52,5 +52,5 @@ golang.org/x/tools v0.0.0-20180917221912-90fa682c2a6e/go.mod h1:n7NCudcB/nEzxVGm
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
 gopkg.in/yaml.v2 v2.2.2/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
 gopkg.in/yaml.v3 v3.0.1 h1:fxVm/GzAzEWqLHuvctI91KS9hhNmmWOoWu0XTYJS7CA=
-src.goblgobl.com/sqlite v0.0.0-20221008111027-09768b2420ed h1:is1EN25v49OB019Ttdc64HV7pQiHwIBMuyPwk/2iLjw=
-src.goblgobl.com/sqlite v0.0.0-20221008111027-09768b2420ed/go.mod h1:R2PshReaqmuRhSdMawsqw5PK15LWT5CgoCvkWUi0nuk=
+src.goblgobl.com/sqlite v0.0.0-20221009033359-8c46925b01b5 h1:7Ea3jI+LUNYa/Fe6EZzP8LwEtxVVOP3I29eYxhM+Jp0=
+src.goblgobl.com/sqlite v0.0.0-20221009033359-8c46925b01b5/go.mod h1:R2PshReaqmuRhSdMawsqw5PK15LWT5CgoCvkWUi0nuk=

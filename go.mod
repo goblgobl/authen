@@ -27,5 +27,5 @@ require (
 	golang.org/x/crypto v0.0.0-20220829220503-c86fa9a7ed90 // indirect
 	golang.org/x/sync v0.0.0-20220929204114-8fcdb60fdcc0 // indirect
 	golang.org/x/text v0.3.7 // indirect
-	src.goblgobl.com/sqlite v0.0.0-20221008111027-09768b2420ed // indirect
+	src.goblgobl.com/sqlite v0.0.0-20221009033359-8c46925b01b5 // indirect
 )
