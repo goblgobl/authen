@@ -46,7 +46,7 @@ func (c Conn) Info() (any, error) {
 }
 
 func (c Conn) GetProject(id string) (*data.Project, error) {
-	row := c.Row("select id, max_users from authen_projects where id = ?1", id)
+	row := c.Row("select id, issuer, max_users from authen_projects where id = ?1", id)
 
 	project, err := scanProject(row)
 	if err == sqlite.ErrNoRows {
@@ -65,7 +65,7 @@ func (c Conn) GetUpdatedProjects(timestamp time.Time) ([]*data.Project, error) {
 		return nil, err
 	}
 
-	rows := c.Rows("select id, max_users from authen_projects where updated > ?1", timestamp)
+	rows := c.Rows("select id, issuer, max_users from authen_projects where updated > ?1", timestamp)
 	defer rows.Close()
 
 	projects := make([]*data.Project, 0, count)
@@ -81,15 +81,16 @@ func (c Conn) GetUpdatedProjects(timestamp time.Time) ([]*data.Project, error) {
 }
 
 func scanProject(scanner sqlite.Scanner) (*data.Project, error) {
-	var id string
+	var id, issuer string
 	var maxUsers int
 
-	if err := scanner.Scan(&id, &maxUsers); err != nil {
+	if err := scanner.Scan(&id, &issuer, &maxUsers); err != nil {
 		return nil, err
 	}
 
 	return &data.Project{
 		Id:       id,
+		Issuer:   issuer,
 		MaxUsers: uint32(maxUsers),
 	}, nil
 }

@@ -24,17 +24,18 @@ func Test_GetProject_Unknown(t *testing.T) {
 
 func Test_GetProject_Success(t *testing.T) {
 	withTestDB(func(conn Conn) {
-		conn.MustExec("insert into authen_projects (id, max_users) values ('p1', 93)")
+		conn.MustExec("insert into authen_projects (id, issuer, max_users) values ('p1', 'is1', 93)")
 		p, err := conn.GetProject("p1")
 		assert.Nil(t, err)
 		assert.Equal(t, p.Id, "p1")
+		assert.Equal(t, p.Issuer, "is1")
 		assert.Equal(t, p.MaxUsers, 93)
 	})
 }
 
 func Test_GetUpdatedProjects_None(t *testing.T) {
 	withTestDB(func(conn Conn) {
-		conn.MustExec("insert into authen_projects (id, max_users, updated) values ('p1', 93, 0)")
+		conn.MustExec("insert into authen_projects (id, issuer, max_users, updated) values ('p1', '2is', 93, 0)")
 		updated, err := conn.GetUpdatedProjects(time.Now())
 		assert.Nil(t, err)
 		assert.Equal(t, len(updated), 0)
@@ -44,11 +45,11 @@ func Test_GetUpdatedProjects_None(t *testing.T) {
 func Test_GetUpdatedProjects_Success(t *testing.T) {
 	withTestDB(func(conn Conn) {
 		conn.MustExec(`
-			insert into authen_projects (id, max_users, updated) values
-			('p1', 1, unixepoch() - 500),
-			('p2', 2, unixepoch() - 200),
-			('p3', 3, unixepoch() - 100),
-			('p4', 4, unixepoch() - 10)
+			insert into authen_projects (id, issuer, max_users, updated) values
+			('p1', '', 1, unixepoch() - 500),
+			('p2', '', 2, unixepoch() - 200),
+			('p3', '', 3, unixepoch() - 100),
+			('p4', '', 4, unixepoch() - 10)
 		`)
 		updated, err := conn.GetUpdatedProjects(time.Now().Add(time.Second * -105))
 		assert.Nil(t, err)

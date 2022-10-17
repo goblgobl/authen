@@ -1,6 +1,6 @@
 package tests
 
-// THIS needs to be called "0tests", because we need the init
+// This _needs_ to be called "0tests", because we need the init
 // in this file to execute before the init in any other file
 // (awful)
 

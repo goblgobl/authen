@@ -9,10 +9,10 @@ import (
 	"src.goblgobl.com/utils/log"
 )
 
-var InstanceId uint8
+var Config config.Config
 
 func Init(config config.Config) error {
-	InstanceId = config.InstanceId
+	Config = config
 	if seconds := config.ProjectUpdateFrequency; seconds != 0 {
 		go reloadUpdatedProjects(time.Duration(seconds) * time.Second)
 	}

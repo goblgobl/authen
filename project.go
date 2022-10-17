@@ -31,14 +31,14 @@ type Project struct {
 	// the pid=$id field
 	logField log.Field
 
-	Id string
-
+	Id           string
+	Issuer       string `json:"issuer"`
 	Capabilities ProjectCapabilities
 }
 
 func (p *Project) NextRequestId() string {
 	nextId := atomic.AddUint32(&p.requestId, 1)
-	return utils.EncodeRequestId(nextId, InstanceId)
+	return utils.EncodeRequestId(nextId, Config.InstanceId)
 }
 
 func loadProject(id string) (*Project, error) {
@@ -54,13 +54,13 @@ func createProjectFromProjectData(projectData *data.Project) *Project {
 
 	return &Project{
 		Id:       id,
+		Issuer:   projectData.Issuer,
 		logField: log.NewField().String("pid", id).Finalize(),
 
 		// If we let this start at 0, then restarts are likely to produce duplicates.
 		// While we make no guarantees about the uniqueness of the requestId, there's
 		// no reason we can't help things out a little.
 		requestId: uint32(time.Now().Unix()),
-
 		Capabilities: ProjectCapabilities{
 			MaxUsers: projectData.MaxUsers,
 		},

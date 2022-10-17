@@ -34,16 +34,17 @@ func Test_GetProject_Unknown(t *testing.T) {
 
 func Test_GetProject_Success(t *testing.T) {
 	db.MustExec("truncate table authen_projects")
-	db.MustExec("insert into authen_projects (id, max_users) values ('p1qa', 84)")
+	db.MustExec("insert into authen_projects (id, issuer, max_users) values ('p1qa', 'goblgobl.com', 84)")
 	p, err := db.GetProject("p1qa")
 	assert.Nil(t, err)
 	assert.Equal(t, p.Id, "p1qa")
 	assert.Equal(t, p.MaxUsers, 84)
+	assert.Equal(t, p.Issuer, "goblgobl.com")
 }
 
 func Test_GetUpdatedProjects_None(t *testing.T) {
 	db.MustExec("truncate table authen_projects")
-	db.MustExec("insert into authen_projects (id, max_users, updated) values ('p3', 11, now() - interval '1 second')")
+	db.MustExec("insert into authen_projects (id, issuer, max_users, updated) values ('p3', '', 11, now() - interval '1 second')")
 	updated, err := db.GetUpdatedProjects(time.Now())
 	assert.Nil(t, err)
 	assert.Equal(t, len(updated), 0)
@@ -52,11 +53,11 @@ func Test_GetUpdatedProjects_None(t *testing.T) {
 func Test_GetUpdatedProjects_Success(t *testing.T) {
 	db.MustExec("truncate table authen_projects")
 	db.MustExec(`
-			insert into authen_projects (id, max_users, updated) values
-			('p1', 1, now() - interval '500 second'),
-			('p2', 2, now() - interval '200 second'),
-			('p3', 3, now() - interval '100 second'),
-			('p4', 4, now() - interval '10 second')
+			insert into authen_projects (id, issuer, max_users, updated) values
+			('p1', '', 1, now() - interval '500 second'),
+			('p2', '', 2, now() - interval '200 second'),
+			('p3', '', 3, now() - interval '100 second'),
+			('p4', '', 4, now() - interval '10 second')
 		`)
 	updated, err := db.GetUpdatedProjects(time.Now().Add(time.Second * -105))
 	assert.Nil(t, err)

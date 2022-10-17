@@ -49,7 +49,7 @@ func (db DB) Info() (any, error) {
 
 func (db DB) GetProject(id string) (*data.Project, error) {
 	row := db.QueryRow(context.Background(), `
-		select id, max_users
+		select id, issuer, max_users
 		from authen_projects
 		where id = $1
 	`, id)
@@ -72,7 +72,7 @@ func (db DB) GetUpdatedProjects(timestamp time.Time) ([]*data.Project, error) {
 		return nil, err
 	}
 
-	rows, err := db.Query(context.Background(), "select id, max_users from authen_projects where updated > $1", timestamp)
+	rows, err := db.Query(context.Background(), "select id, issuer, max_users from authen_projects where updated > $1", timestamp)
 	if err != nil {
 		return nil, err
 	}
@@ -91,14 +91,15 @@ func (db DB) GetUpdatedProjects(timestamp time.Time) ([]*data.Project, error) {
 }
 
 func scanProject(row pg.Row) (*data.Project, error) {
-	var id string
+	var id, issuer string
 	var maxUsers int
-	if err := row.Scan(&id, &maxUsers); err != nil {
+	if err := row.Scan(&id, &issuer, &maxUsers); err != nil {
 		return nil, err
 	}
 
 	return &data.Project{
 		Id:       id,
+		Issuer:   issuer,
 		MaxUsers: uint32(maxUsers),
 	}, nil
 }

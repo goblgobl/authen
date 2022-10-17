@@ -4,6 +4,7 @@ import (
 	"src.goblgobl.com/authen/codes"
 	"src.goblgobl.com/authen/config"
 	"src.goblgobl.com/authen/http/misc"
+	"src.goblgobl.com/authen/http/totp"
 	"src.goblgobl.com/utils/http"
 
 	"github.com/fasthttp/router"
@@ -39,6 +40,8 @@ func handler() func(ctx *fasthttp.RequestCtx) {
 	// misc routes
 	r.GET("/v1/ping", misc.Ping)
 	r.GET("/v1/info", misc.Info)
+
+	r.POST("/v1/totp", envHandler("totp_create", totp.Create))
 
 	r.NotFound = func(ctx *fasthttp.RequestCtx) {
 		resNotFoundPath.Write(ctx)

@@ -21,7 +21,7 @@ func Test_Project_NextRequestId(t *testing.T) {
 		seen[p.NextRequestId()] = struct{}{}
 	}
 
-	InstanceId += 1
+	Config.InstanceId += 1
 	p = Project{requestId: 1}
 	for i := 0; i < 20; i++ {
 		seen[p.NextRequestId()] = struct{}{}
@@ -37,7 +37,7 @@ func Test_Projects_Get_Unknown(t *testing.T) {
 }
 
 func Test_Projects_Get_Known(t *testing.T) {
-	row := tests.Factory.Project.Insert("max_users", 76)
+	row := tests.Factory.Project.Insert("issuer", "testing.goblgobl.com", "max_users", 76)
 	id := row.String("id")
 
 	p, err := Projects.Get(id)
@@ -46,4 +46,5 @@ func Test_Projects_Get_Known(t *testing.T) {
 	assert.Equal(t, p.Capabilities.MaxUsers, 76)
 	assert.Nowish(t, time.Unix(int64(p.requestId), 0))
 	assert.Equal(t, string(p.logField.KV()), "pid="+id)
+	assert.Equal(t, p.Issuer, "testing.goblgobl.com")
 }
