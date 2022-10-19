@@ -32,7 +32,7 @@ func Test_EnvHandler_Missing_Project_Header(t *testing.T) {
 }
 
 func Test_EnvHandler_Unknown_Project(t *testing.T) {
-	conn := request.Req(t).ProjectId("unknown").Conn()
+	conn := request.Req(t).ProjectId("6429C13A-DBB2-4FF2-ADDA-571C601B91E6").Conn()
 	envHandler("", func(conn *fasthttp.RequestCtx, env *authen.Env) (http.Response, error) {
 		assert.Fail(t, "next should not be called")
 		return nil, nil

@@ -22,8 +22,8 @@ func Test_UpdateProjectsUpdatedSince(t *testing.T) {
 	assert.Nil(t, p)
 
 	p, _ = Projects.Get(row2.String("id"))
-	assert.Equal(t, p.Capabilities.MaxUsers, 2)
+	assert.Equal(t, p.MaxUsers, 2)
 
 	p, _ = Projects.Get(row3.String("id"))
-	assert.Equal(t, p.Capabilities.MaxUsers, 3)
+	assert.Equal(t, p.MaxUsers, 3)
 }

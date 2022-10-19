@@ -90,6 +90,57 @@ func (db DB) GetUpdatedProjects(timestamp time.Time) ([]*data.Project, error) {
 	return projects, rows.Err()
 }
 
+func (db DB) CreateTOTP(opts data.CreateTOTP) (data.CreateTOTPResult, error) {
+	value := opts.Value
+	userId := opts.UserId
+	maxUsers := opts.MaxUsers
+	projectId := opts.ProjectId
+
+	var result data.CreateTOTPResult
+
+	// Since we check first, then add the user (outside of a transaction)
+	// concurrent calls to this might result in going a little over maxUsers
+	// but I'm ok with that in the name of minimizing the DB calls
+	// we need to make inside a transaction.
+	canAdd, err := db.canAddUser(projectId, userId, maxUsers)
+	if err != nil {
+		return result, err
+	}
+	if !canAdd {
+		result.Status = data.CREATE_TOTP_MAX_USERS
+		return result, nil
+	}
+
+	_, err = db.Exec(context.Background(), `
+		insert into authen_totp_setups (project_id, user_id, nonce, secret)
+		values ($1, $2, $3, $4)
+		on conflict (project_id, user_id) do update set nonce = $3, secret = $4
+	`, projectId, userId, value.Nonce, value.Data)
+
+	if err != nil {
+		return result, err
+	}
+
+	result.Status = data.CREATE_TOTP_OK
+	return result, nil
+}
+
+func (db DB) canAddUser(projectId string, userId string, maxUsers uint32) (bool, error) {
+	if maxUsers == 0 {
+		return true, nil
+	}
+
+	// if the user already exists, then we aren't adding a user
+	// and thus cannot be over any limit
+	exists, err := pg.Scalar[bool](db.DB, "select exists (select 1 from authen_totps where project_id = $1 and user_id = $2)", projectId, userId)
+	if exists || err != nil {
+		return exists, err
+	}
+
+	count, err := pg.Scalar[uint32](db.DB, "select count(*) from authen_totps where project_id = $1", projectId)
+	return count < maxUsers, err
+}
+
 func scanProject(row pg.Row) (*data.Project, error) {
 	var id, issuer string
 	var maxUsers int

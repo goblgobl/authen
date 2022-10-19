@@ -80,6 +80,57 @@ func (c Conn) GetUpdatedProjects(timestamp time.Time) ([]*data.Project, error) {
 	return projects, rows.Error()
 }
 
+func (c Conn) CreateTOTP(opts data.CreateTOTP) (data.CreateTOTPResult, error) {
+	value := opts.Value
+	userId := opts.UserId
+	maxUsers := opts.MaxUsers
+	projectId := opts.ProjectId
+
+	var result data.CreateTOTPResult
+
+	// Since we check first, then add the user (outside of a transaction)
+	// concurrent calls to this might result in going a little over maxUsers
+	// but I'm ok with that in the name of minimizing the DB calls
+	// we need to make inside a transaction.
+	canAdd, err := c.canAddUser(projectId, userId, maxUsers)
+	if err != nil {
+		return result, err
+	}
+
+	if !canAdd {
+		result.Status = data.CREATE_TOTP_MAX_USERS
+		return result, nil
+	}
+
+	err = c.Exec(`
+		insert or replace into authen_totp_setups (project_id, user_id, nonce, secret)
+		values (?1, ?2, ?3, ?4)
+	`, projectId, userId, value.Nonce, value.Data)
+
+	if err != nil {
+		return result, err
+	}
+
+	result.Status = data.CREATE_TOTP_OK
+	return result, nil
+}
+
+func (c Conn) canAddUser(projectId string, userId string, maxUsers uint32) (bool, error) {
+	if maxUsers == 0 {
+		return true, nil
+	}
+
+	// if the user already exists, then we aren't adding a user
+	// and thus cannot be over any limit
+	exists, err := sqlite.Scalar[bool](c.Conn, "select exists (select 1 from authen_totps where project_id = ?1 and user_id = ?2)", projectId, userId)
+	if exists || err != nil {
+		return exists, err
+	}
+
+	count, err := sqlite.Scalar[int](c.Conn, "select count(*) from authen_totps where project_id = ?1", projectId)
+	return count < int(maxUsers), err
+}
+
 func scanProject(scanner sqlite.Scanner) (*data.Project, error) {
 	var id, issuer string
 	var maxUsers int

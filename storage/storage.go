@@ -11,7 +11,7 @@ import (
 	"src.goblgobl.com/utils/typed"
 )
 
-// singleton, set
+// singleton
 var DB Storage
 
 type Storage interface {
@@ -26,6 +26,8 @@ type Storage interface {
 	GetProject(id string) (*data.Project, error)
 
 	GetUpdatedProjects(timestamp time.Time) ([]*data.Project, error)
+
+	CreateTOTP(opts data.CreateTOTP) (data.CreateTOTPResult, error)
 }
 
 func Configure(config typed.Typed) (err error) {

@@ -17,10 +17,6 @@ func init() {
 	Projects = concurrent.NewMap[*Project](loadProject)
 }
 
-type ProjectCapabilities struct {
-	MaxUsers uint32 `json:"max_users"`
-}
-
 // A project instance isn't updated. If the project is changed,
 // a new instance is created.
 type Project struct {
@@ -31,9 +27,9 @@ type Project struct {
 	// the pid=$id field
 	logField log.Field
 
-	Id           string
-	Issuer       string `json:"issuer"`
-	Capabilities ProjectCapabilities
+	Id       string
+	Issuer   string `json:"issuer"`
+	MaxUsers uint32 `json:"max_users"`
 }
 
 func (p *Project) NextRequestId() string {
@@ -55,14 +51,12 @@ func createProjectFromProjectData(projectData *data.Project) *Project {
 	return &Project{
 		Id:       id,
 		Issuer:   projectData.Issuer,
+		MaxUsers: projectData.MaxUsers,
 		logField: log.NewField().String("pid", id).Finalize(),
 
 		// If we let this start at 0, then restarts are likely to produce duplicates.
 		// While we make no guarantees about the uniqueness of the requestId, there's
 		// no reason we can't help things out a little.
 		requestId: uint32(time.Now().Unix()),
-		Capabilities: ProjectCapabilities{
-			MaxUsers: projectData.MaxUsers,
-		},
 	}
 }
