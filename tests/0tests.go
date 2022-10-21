@@ -47,6 +47,7 @@ func UUID() string {
 
 type TestableDB interface {
 	Placeholder(i int) string
+	IsNotFound(err error) bool
 	RowToMap(sql string, args ...any) (typed.Typed, error)
 }
 
@@ -60,6 +61,9 @@ func Row(sql string, args ...any) typed.Typed {
 	}
 	row, err := db.RowToMap(sql, args...)
 	if err != nil {
+		if db.IsNotFound(err) {
+			return nil
+		}
 		panic(err)
 	}
 	return row

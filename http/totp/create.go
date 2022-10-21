@@ -20,8 +20,8 @@ import (
 
 var (
 	createValidation = validation.Input().
-				Field(validation.String("id").Required().Length(1, 100)).
-				Field(validation.String("key").Required().Length(32, 32)).
+				Field(idValidation).
+				Field(keyValidation).
 				Field(validation.String("account").Required().Length(1, 100)).
 				Field(validation.String("issuer").Length(1, 100))
 
@@ -61,7 +61,7 @@ func Create(conn *fasthttp.RequestCtx, env *authen.Env) (http.Response, error) {
 	}
 
 	project := env.Project
-	result, err := storage.DB.CreateTOTP(data.CreateTOTP{
+	result, err := storage.DB.CreateTOTPSetup(data.CreateTOTP{
 		Value:     encrypted,
 		UserId:    input.String("id"),
 		ProjectId: project.Id,

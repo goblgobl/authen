@@ -5,6 +5,7 @@ import (
 
 	"src.goblgobl.com/authen/storage/data"
 	"src.goblgobl.com/authen/storage/sqlite/migrations"
+	"src.goblgobl.com/utils/encryption"
 	"src.goblgobl.com/utils/sqlite"
 	"src.goblgobl.com/utils/typed"
 )
@@ -83,6 +84,32 @@ func (c Conn) GetUpdatedProjects(timestamp time.Time) ([]*data.Project, error) {
 func (c Conn) CreateTOTP(opts data.CreateTOTP) (data.CreateTOTPResult, error) {
 	value := opts.Value
 	userId := opts.UserId
+	projectId := opts.ProjectId
+
+	err := c.Transaction(func() error {
+		err := c.Exec(`
+			insert or replace into authen_totps (project_id, user_id, nonce, secret)
+			values (?1, ?2, ?3, ?4)
+		`, projectId, userId, value.Nonce, value.Data)
+
+		if err != nil {
+			return err
+		}
+
+		return c.Exec(`
+			delete from authen_totp_setups
+			where project_id = ?1 and user_id = ?2
+		`, projectId, userId)
+	})
+
+	return data.CreateTOTPResult{
+		Status: data.CREATE_TOTP_OK,
+	}, err
+}
+
+func (c Conn) CreateTOTPSetup(opts data.CreateTOTP) (data.CreateTOTPResult, error) {
+	value := opts.Value
+	userId := opts.UserId
 	maxUsers := opts.MaxUsers
 	projectId := opts.ProjectId
 
@@ -113,6 +140,32 @@ func (c Conn) CreateTOTP(opts data.CreateTOTP) (data.CreateTOTPResult, error) {
 
 	result.Status = data.CREATE_TOTP_OK
 	return result, nil
+}
+
+func (c Conn) GetTOTPSetup(opts data.GetTOTPSetup) (data.GetTOTPSetupResult, error) {
+	userId := opts.UserId
+	projectId := opts.ProjectId
+	var result data.GetTOTPSetupResult
+
+	row := c.Row(`
+		select nonce, secret
+		from authen_totp_setups
+		where project_id = ?1 and user_id = ?2
+	`, projectId, userId)
+
+	var nonce, secret []byte
+	if err := row.Scan(&nonce, &secret); err != nil {
+		if err == sqlite.ErrNoRows {
+			result.Status = data.GET_TOTP_SETUP_NOT_FOUND
+			return result, nil
+		}
+		return result, err
+	}
+
+	return data.GetTOTPSetupResult{
+		Status: data.GET_TOTP_SETUP_OK,
+		Value:  encryption.Value{Nonce: nonce, Data: secret},
+	}, nil
 }
 
 func (c Conn) canAddUser(projectId string, userId string, maxUsers uint32) (bool, error) {

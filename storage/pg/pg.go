@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+	"src.goblgobl.com/utils/encryption"
 	"src.goblgobl.com/utils/pg"
 	"src.goblgobl.com/utils/typed"
 
@@ -90,7 +92,7 @@ func (db DB) GetUpdatedProjects(timestamp time.Time) ([]*data.Project, error) {
 	return projects, rows.Err()
 }
 
-func (db DB) CreateTOTP(opts data.CreateTOTP) (data.CreateTOTPResult, error) {
+func (db DB) CreateTOTPSetup(opts data.CreateTOTP) (data.CreateTOTPResult, error) {
 	value := opts.Value
 	userId := opts.UserId
 	maxUsers := opts.MaxUsers
@@ -123,6 +125,61 @@ func (db DB) CreateTOTP(opts data.CreateTOTP) (data.CreateTOTPResult, error) {
 
 	result.Status = data.CREATE_TOTP_OK
 	return result, nil
+}
+
+func (db DB) CreateTOTP(opts data.CreateTOTP) (data.CreateTOTPResult, error) {
+	value := opts.Value
+	userId := opts.UserId
+	projectId := opts.ProjectId
+
+	err := db.Transaction(func(tx pgx.Tx) error {
+		_, err := db.Exec(context.Background(), `
+			insert into authen_totps (project_id, user_id, nonce, secret)
+			values ($1, $2, $3, $4)
+			on conflict (project_id, user_id) do update set nonce = $3, secret = $4
+		`, projectId, userId, value.Nonce, value.Data)
+
+		if err != nil {
+			return err
+		}
+
+		_, err = db.Exec(context.Background(), `
+			delete from authen_totp_setups
+			where project_id = $1 and user_id = $2
+		`, projectId, userId)
+
+		return err
+	})
+
+	return data.CreateTOTPResult{
+		Status: data.CREATE_TOTP_OK,
+	}, err
+}
+
+func (db DB) GetTOTPSetup(opts data.GetTOTPSetup) (data.GetTOTPSetupResult, error) {
+	userId := opts.UserId
+	projectId := opts.ProjectId
+	var result data.GetTOTPSetupResult
+
+	row := db.QueryRow(context.Background(), `
+		select nonce, secret
+		from authen_totp_setups
+		where project_id = $1 and user_id = $2
+	`, projectId, userId)
+
+	var nonce, secret []byte
+	if err := row.Scan(&nonce, &secret); err != nil {
+		if err == pg.ErrNoRows {
+			result.Status = data.GET_TOTP_SETUP_NOT_FOUND
+			return result, nil
+		}
+		return result, err
+	}
+
+	return data.GetTOTPSetupResult{
+		Status: data.GET_TOTP_SETUP_OK,
+		Value:  encryption.Value{Nonce: nonce, Data: secret},
+	}, nil
 }
 
 func (db DB) canAddUser(projectId string, userId string, maxUsers uint32) (bool, error) {

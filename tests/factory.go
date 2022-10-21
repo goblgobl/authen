@@ -1,10 +1,13 @@
 package tests
 
 import (
+	"strings"
 	"time"
 
 	"src.goblgobl.com/authen/storage"
 	f "src.goblgobl.com/tests/factory"
+	"src.goblgobl.com/utils"
+	"src.goblgobl.com/utils/encryption"
 	"src.goblgobl.com/utils/uuid"
 )
 
@@ -36,7 +39,7 @@ func init() {
 	Factory.TOTP = f.NewTable("authen_totps", func(args f.KV) f.KV {
 		return f.KV{
 			"project_id": args.UUID("project_id", uuid.String()),
-			"user_id":    args.String("issuer", uuid.String()),
+			"user_id":    args.String("user_id", uuid.String()),
 			"nonce":      args.String("nonce", ""),
 			"secret":     args.String("secret", ""),
 			"created":    args.Time("created", time.Now()),
@@ -44,11 +47,21 @@ func init() {
 	})
 
 	Factory.TOTPSetup = f.NewTable("authen_totp_setups", func(args f.KV) f.KV {
+		var enc encryption.Value
+		secret := args.String("secret", "").(string)
+		if secret != "" {
+			var err error
+			key := args.String("key", strings.Repeat("a", 32)).(string)
+			enc, err = encryption.Encrypt(utils.S2B(key), secret)
+			if err != nil {
+				panic(err)
+			}
+		}
 		return f.KV{
 			"project_id": args.UUID("project_id", uuid.String()),
-			"user_id":    args.String("issuer", uuid.String()),
-			"nonce":      args.String("nonce", ""),
-			"secret":     args.String("secret", ""),
+			"user_id":    args.String("user_id", uuid.String()),
+			"secret":     enc.Data,
+			"nonce":      enc.Nonce,
 			"created":    args.Time("created", time.Now()),
 		}
 	})

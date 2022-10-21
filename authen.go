@@ -1,7 +1,6 @@
 package authen
 
 import (
-	"fmt"
 	"time"
 
 	"src.goblgobl.com/authen/config"
@@ -43,7 +42,6 @@ func updateProjectsUpdatedSince(t time.Time) {
 	}
 
 	for _, data := range updatedProjects {
-		fmt.Println(data.Id)
 		project := createProjectFromProjectData(data)
 		Projects.Put(project.Id, project)
 	}
