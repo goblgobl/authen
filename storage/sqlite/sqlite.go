@@ -1,6 +1,7 @@
 package sqlite
 
 import (
+	"fmt"
 	"time"
 
 	"src.goblgobl.com/authen/storage/data"
@@ -18,13 +19,17 @@ func New(config typed.Typed) (Conn, error) {
 	filePath := config.String("path")
 	conn, err := sqlite.New(filePath, true)
 	if err != nil {
-		return Conn{}, err
+		return Conn{}, fmt.Errorf("Sqlite.New - %w", err)
 	}
 	return Conn{conn}, nil
 }
 
 func (c Conn) Ping() error {
-	return c.Exec("select 1")
+	err := c.Exec("select 1")
+	if err != nil {
+		return fmt.Errorf("Sqlite.Ping - %w", err)
+	}
+	return nil
 }
 
 func (c Conn) EnsureMigrations() error {
@@ -50,10 +55,13 @@ func (c Conn) GetProject(id string) (*data.Project, error) {
 	row := c.Row("select id, issuer, max_users from authen_projects where id = ?1", id)
 
 	project, err := scanProject(row)
-	if err == sqlite.ErrNoRows {
-		return nil, nil
+	if err != nil {
+		if err == sqlite.ErrNoRows {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("Sqlite.GetProject - %w", err)
 	}
-	return project, err
+	return project, nil
 }
 
 func (c Conn) GetUpdatedProjects(timestamp time.Time) ([]*data.Project, error) {
@@ -62,8 +70,11 @@ func (c Conn) GetUpdatedProjects(timestamp time.Time) ([]*data.Project, error) {
 	// of the time we're going to be doing a single DB call (either to get the count
 	// which returns 0, or to get an empty result set).
 	count, err := sqlite.Scalar[int](c.Conn, "select count(*) from authen_projects where updated > ?1", timestamp)
-	if count == 0 || err != nil {
-		return nil, err
+	if err != nil {
+		return nil, fmt.Errorf("Sqlite.GetUpdatedProjects (count) - %w", err)
+	}
+	if count == 0 {
+		return nil, nil
 	}
 
 	rows := c.Rows("select id, issuer, max_users from authen_projects where updated > ?1", timestamp)
@@ -78,7 +89,11 @@ func (c Conn) GetUpdatedProjects(timestamp time.Time) ([]*data.Project, error) {
 		projects = append(projects, project)
 	}
 
-	return projects, rows.Error()
+	if err := rows.Error(); err != nil {
+		return nil, fmt.Errorf("Sqlite.GetUpdatedProjects (select) - %w", err)
+	}
+
+	return projects, nil
 }
 
 func (c Conn) CreateTOTP(opts data.CreateTOTP) (data.CreateTOTPResult, error) {
@@ -91,15 +106,20 @@ func (c Conn) CreateTOTP(opts data.CreateTOTP) (data.CreateTOTPResult, error) {
 			insert or replace into authen_totps (project_id, user_id, nonce, secret)
 			values (?1, ?2, ?3, ?4)
 		`, projectId, userId, value.Nonce, value.Data)
-
 		if err != nil {
-			return err
+			return fmt.Errorf("Sqlite.CreateTOTP (upsert) - %w", err)
 		}
 
-		return c.Exec(`
+		err = c.Exec(`
 			delete from authen_totp_setups
 			where project_id = ?1 and user_id = ?2
 		`, projectId, userId)
+		if err != nil {
+			return fmt.Errorf("Sqlite.CreateTOTP (delete) - %w", err)
+		}
+
+		return nil
+
 	})
 
 	return data.CreateTOTPResult{
@@ -135,7 +155,7 @@ func (c Conn) CreateTOTPSetup(opts data.CreateTOTP) (data.CreateTOTPResult, erro
 	`, projectId, userId, value.Nonce, value.Data)
 
 	if err != nil {
-		return result, err
+		return result, fmt.Errorf("Sqlite.CreateTOTPSetup - %w", err)
 	}
 
 	result.Status = data.CREATE_TOTP_OK
@@ -159,7 +179,7 @@ func (c Conn) GetTOTPSetup(opts data.GetTOTPSetup) (data.GetTOTPSetupResult, err
 			result.Status = data.GET_TOTP_SETUP_NOT_FOUND
 			return result, nil
 		}
-		return result, err
+		return result, fmt.Errorf("Sqlite.GetTOTPSetup - %w", err)
 	}
 
 	return data.GetTOTPSetupResult{
