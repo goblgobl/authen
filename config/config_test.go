@@ -9,12 +9,12 @@ import (
 
 func Test_Config_InvalidPath(t *testing.T) {
 	_, err := Configure("invalid.json")
-	assert.Equal(t, err.Error(), "code: 100001 - open invalid.json: no such file or directory")
+	assert.Equal(t, err.Error(), "code: 103001 - open invalid.json: no such file or directory")
 }
 
 func Test_Config_InvalidJson(t *testing.T) {
 	_, err := Configure(testConfigPath("invalid_config.json"))
-	assert.Equal(t, err.Error(), "code: 100002 - expected colon after object key")
+	assert.Equal(t, err.Error(), "code: 103002 - expected colon after object key")
 }
 
 func Test_Config_Defaults(t *testing.T) {

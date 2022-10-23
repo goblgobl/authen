@@ -7,7 +7,6 @@ import (
 	"src.goblgobl.com/authen/storage/data"
 	"src.goblgobl.com/tests"
 	"src.goblgobl.com/tests/assert"
-	"src.goblgobl.com/utils/encryption"
 	"src.goblgobl.com/utils/typed"
 	"src.goblgobl.com/utils/uuid"
 )
@@ -80,9 +79,9 @@ func Test_CreateTOTPSetup(t *testing.T) {
 	projectId1, projectId2 := uuid.String(), uuid.String()
 
 	db.MustExec(`
-		insert into authen_totps (project_id, user_id, nonce, secret) values
-		($1, 'u1', '', ''),
-		($2, 'u2', '', '')
+		insert into authen_totps (project_id, user_id, secret) values
+		($1, 'u1', ''),
+		($2, 'u2', '')
 	`, projectId1, projectId1)
 
 	// can add 1 more
@@ -90,21 +89,20 @@ func Test_CreateTOTPSetup(t *testing.T) {
 		MaxUsers:  3,
 		UserId:    "u3",
 		ProjectId: projectId1,
-		Value:     encryption.Value{Nonce: []byte{1, 2}, Data: []byte{3, 4}},
+		Secret:    []byte{3, 4},
 	})
 	assert.Nil(t, err)
 	assert.Equal(t, res.Status, data.CREATE_TOTP_OK)
 	row, _ := db.RowToMap("select * from authen_totp_setups where project_id = $1 and user_id = $2", projectId1, "u3")
 	assert.Nowish(t, row.Time("created"))
-	assert.Bytes(t, row["nonce"].([]byte), []byte{1, 2})
-	assert.Bytes(t, row["secret"].([]byte), []byte{3, 4})
+	assert.Bytes(t, row.Bytes("secret"), []byte{3, 4})
 
 	// can't add any more
 	res, err = db.CreateTOTPSetup(data.CreateTOTP{
 		MaxUsers:  2,
 		UserId:    "u4",
 		ProjectId: projectId1,
-		Value:     encryption.Value{Nonce: []byte{11, 12}, Data: []byte{13, 14}},
+		Secret:    []byte{13, 14},
 	})
 	assert.Nil(t, err)
 	assert.Equal(t, res.Status, data.CREATE_TOTP_MAX_USERS)
@@ -114,42 +112,39 @@ func Test_CreateTOTPSetup(t *testing.T) {
 		MaxUsers:  0,
 		UserId:    "u4",
 		ProjectId: projectId1,
-		Value:     encryption.Value{Nonce: []byte{11, 12}, Data: []byte{13, 14}},
+		Secret:    []byte{15, 16},
 	})
 	assert.Nil(t, err)
 	assert.Equal(t, res.Status, data.CREATE_TOTP_OK)
 	row, _ = db.RowToMap("select * from authen_totp_setups where project_id = $1 and user_id = $2", projectId1, "u4")
 	assert.Nowish(t, row.Time("created"))
-	assert.Bytes(t, row["nonce"].([]byte), []byte{11, 12})
-	assert.Bytes(t, row["secret"].([]byte), []byte{13, 14})
+	assert.Bytes(t, row.Bytes("secret"), []byte{15, 16})
 
 	// limits are per project
 	res, err = db.CreateTOTPSetup(data.CreateTOTP{
 		MaxUsers:  1,
 		UserId:    "u4",
 		ProjectId: projectId2,
-		Value:     encryption.Value{Nonce: []byte{21, 22}, Data: []byte{23, 24}},
+		Secret:    []byte{23, 24},
 	})
 	assert.Nil(t, err)
 	assert.Equal(t, res.Status, data.CREATE_TOTP_OK)
 	row, _ = db.RowToMap("select * from authen_totp_setups where project_id = $1 and user_id = $2", projectId2, "u4")
 	assert.Nowish(t, row.Time("created"))
-	assert.Bytes(t, row["nonce"].([]byte), []byte{21, 22})
-	assert.Bytes(t, row["secret"].([]byte), []byte{23, 24})
+	assert.Bytes(t, row.Bytes("secret"), []byte{23, 24})
 
 	// existing users don't increment count
 	res, err = db.CreateTOTPSetup(data.CreateTOTP{
 		MaxUsers:  1,
 		UserId:    "u1",
 		ProjectId: projectId1,
-		Value:     encryption.Value{Nonce: []byte{31, 32}, Data: []byte{33, 34}},
+		Secret:    []byte{33, 34},
 	})
 	assert.Nil(t, err)
 	assert.Equal(t, res.Status, data.CREATE_TOTP_OK)
 	row, _ = db.RowToMap("select * from authen_totp_setups where project_id = $1 and user_id = $2", projectId1, "u1")
 	assert.Nowish(t, row.Time("created"))
-	assert.Bytes(t, row["nonce"].([]byte), []byte{31, 32})
-	assert.Bytes(t, row["secret"].([]byte), []byte{33, 34})
+	assert.Bytes(t, row.Bytes("secret"), []byte{33, 34})
 }
 
 func Test_CreateTOTP(t *testing.T) {
@@ -158,14 +153,14 @@ func Test_CreateTOTP(t *testing.T) {
 	// test upsert
 	for i := byte(1); i < 3; i++ {
 		db.MustExec(`
-			insert into authen_totp_setups (project_id, user_id, nonce, secret) values
-			($1, $2, '1a', '2b')
+			insert into authen_totp_setups (project_id, user_id, secret) values
+			($1, $2, '2b')
 		`, projectId1, userId)
 
 		res, err := db.CreateTOTP(data.CreateTOTP{
 			UserId:    userId,
 			ProjectId: projectId1,
-			Value:     encryption.Value{Nonce: []byte{i}, Data: []byte{i, i}},
+			Secret:    []byte{i, i},
 		})
 		assert.Nil(t, err)
 		assert.Equal(t, res.Status, data.CREATE_TOTP_OK)
@@ -176,8 +171,7 @@ func Test_CreateTOTP(t *testing.T) {
 		row, _ = db.RowToMap("select * from authen_totps where user_id = $1", userId)
 		assert.Nowish(t, row.Time("created"))
 		assert.Equal(t, row.String("project_id"), projectId1)
-		assert.Bytes(t, row["nonce"].([]byte), []byte{i})
-		assert.Bytes(t, row["secret"].([]byte), []byte{i, i})
+		assert.Bytes(t, row.Bytes("secret"), []byte{i, i})
 	}
 }
 
@@ -193,8 +187,8 @@ func Test_GetTOTPSetup_NotFound(t *testing.T) {
 func Test_GetTOTPSetup_Found(t *testing.T) {
 	projectId, userId := uuid.String(), uuid.String()
 	db.MustExec(`
-		insert into authen_totp_setups (project_id, user_id, nonce, secret) values
-		($1, $2, 'aaa1', 'bbb2')
+		insert into authen_totp_setups (project_id, user_id, secret) values
+		($1, $2, 'bbb2')
 	`, projectId, userId)
 
 	result, err := db.GetTOTPSetup(data.GetTOTPSetup{
@@ -203,6 +197,5 @@ func Test_GetTOTPSetup_Found(t *testing.T) {
 	})
 	assert.Nil(t, err)
 	assert.Equal(t, result.Status, data.GET_TOTP_SETUP_OK)
-	assert.Bytes(t, result.Value.Data, []byte("bbb2"))
-	assert.Bytes(t, result.Value.Nonce, []byte("aaa1"))
+	assert.Bytes(t, result.Secret, []byte("bbb2"))
 }

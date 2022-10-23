@@ -28,7 +28,7 @@ func Test_EnvHandler_Missing_Project_Header(t *testing.T) {
 		assert.Fail(t, "next should not be called")
 		return nil, nil
 	})(conn)
-	request.Res(t, conn).ExpectInvalid(101002)
+	request.Res(t, conn).ExpectInvalid(102002)
 }
 
 func Test_EnvHandler_Unknown_Project(t *testing.T) {
@@ -37,7 +37,7 @@ func Test_EnvHandler_Unknown_Project(t *testing.T) {
 		assert.Fail(t, "next should not be called")
 		return nil, nil
 	})(conn)
-	request.Res(t, conn).ExpectInvalid(101003)
+	request.Res(t, conn).ExpectInvalid(102003)
 }
 
 func Test_EnvHandler_CallsHandlerWithProject(t *testing.T) {

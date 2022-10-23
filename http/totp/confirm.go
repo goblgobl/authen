@@ -54,10 +54,10 @@ func Confirm(conn *fasthttp.RequestCtx, env *authen.Env) (http.Response, error) 
 		return resSetupNotFound, nil
 	}
 
-	encrypted := result.Value
-	secret, err := encryption.DecryptValue(utils.S2B(input.String("key")), encrypted)
-	if err != nil {
-		// not 100% sure the only cause for an error here can be an invalid key..
+	encrypted := result.Secret
+	key := *(*[32]byte)(input.Bytes("key"))
+	secret, ok := encryption.Decrypt(key, encrypted)
+	if !ok {
 		return resIncorrectKey, nil
 	}
 
@@ -69,7 +69,7 @@ func Confirm(conn *fasthttp.RequestCtx, env *authen.Env) (http.Response, error) 
 	_, err = storage.DB.CreateTOTP(data.CreateTOTP{
 		UserId:    userId,
 		ProjectId: projectId,
-		Value:     encrypted,
+		Secret:    encrypted,
 	})
 
 	return resOK, err

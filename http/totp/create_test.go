@@ -64,11 +64,11 @@ func Test_Create_TOTP_Success(t *testing.T) {
 	env := authen.BuildEnv().Env()
 
 	for i := 0; i < 2; i++ {
-		key := tests.String(32)
+		key, hexKey := tests.Key()
 
 		res := request.ReqT(t, env).
 			Body(map[string]any{
-				"key":     key,
+				"key":     hexKey,
 				"id":      userId,
 				"issuer":  "test-issuer",
 				"account": "test-account",
@@ -80,8 +80,8 @@ func Test_Create_TOTP_Success(t *testing.T) {
 
 		row := tests.Row("select * from authen_totp_setups where user_id = $1", userId)
 		assert.Equal(t, row.String("project_id"), env.Project.Id)
-		dbSecret, err := encryption.Decrypt([]byte(key), row["nonce"].([]byte), row["secret"].([]byte))
-		assert.Nil(t, err)
+		dbSecret, ok := encryption.Decrypt(key, row.Bytes("secret"))
+		assert.True(t, ok)
 		assert.Equal(t, string(dbSecret), secret)
 
 		raw, err := base64.RawStdEncoding.DecodeString(res.String("qr"))
@@ -117,8 +117,8 @@ func Test_Create_TOTP_MaxUsers(t *testing.T) {
 		Body(map[string]any{
 			"issuer":  "test-issuer",
 			"account": "test-account",
-			"key":     tests.String(32),
+			"key":     tests.HexKey(),
 			"id":      tests.String(1, 100),
 		}).
-		Post(Create).ExpectInvalid(101_005)
+		Post(Create).ExpectInvalid(102_005)
 }

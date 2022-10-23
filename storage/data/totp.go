@@ -1,7 +1,5 @@
 package data
 
-import "src.goblgobl.com/utils/encryption"
-
 type CreateTOTPStatus int
 type GetTOTPSetupStatus int
 
@@ -17,7 +15,7 @@ type CreateTOTP struct {
 	ProjectId string
 	UserId    string
 	MaxUsers  uint32
-	Value     encryption.Value
+	Secret    []byte
 }
 
 type CreateTOTPResult struct {
@@ -31,5 +29,5 @@ type GetTOTPSetup struct {
 
 type GetTOTPSetupResult struct {
 	Status GetTOTPSetupStatus
-	Value  encryption.Value
+	Secret []byte
 }

@@ -5,6 +5,9 @@ package tests
 // (awful)
 
 import (
+	crand "crypto/rand"
+	"encoding/hex"
+	"io"
 	"math/rand"
 	"regexp"
 	"time"
@@ -43,6 +46,19 @@ func String(constraints ...int) string {
 
 func UUID() string {
 	return generator.UUID()
+}
+
+func Key() ([32]byte, string) {
+	var key [32]byte
+	if _, err := io.ReadFull(crand.Reader, key[:]); err != nil {
+		panic(err)
+	}
+	return key, hex.EncodeToString(key[:])
+}
+
+func HexKey() string {
+	_, h := Key()
+	return h
 }
 
 type TestableDB interface {

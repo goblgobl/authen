@@ -43,7 +43,6 @@ func createTOTP(tx pgx.Tx) error {
 		create table authen_totp_setups (
 			project_id uuid not null,
 			user_id text not null,
-			nonce bytea not null,
 			secret bytea not null,
 			created timestamptz not null default now(),
 			primary key (project_id, user_id)
@@ -55,7 +54,6 @@ func createTOTP(tx pgx.Tx) error {
 		create table authen_totps (
 			project_id uuid not null,
 			user_id text not null,
-			nonce bytea not null,
 			secret bytea not null,
 			created timestamptz not null default now(),
 			primary key (project_id, user_id)

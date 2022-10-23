@@ -7,7 +7,6 @@ import (
 	"src.goblgobl.com/authen/codes"
 	"src.goblgobl.com/authen/storage"
 	"src.goblgobl.com/authen/storage/data"
-	"src.goblgobl.com/utils"
 	"src.goblgobl.com/utils/encryption"
 	"src.goblgobl.com/utils/http"
 	"src.goblgobl.com/utils/typed"
@@ -53,16 +52,15 @@ func Create(conn *fasthttp.RequestCtx, env *authen.Env) (http.Response, error) {
 		return nil, err
 	}
 
-	key := input.String("key")
-	keyBytes := utils.S2B(key)
-	encrypted, err := encryption.Encrypt(keyBytes, secret)
+	key := *(*[32]byte)(input.Bytes("key"))
+	encrypted, err := encryption.Encrypt(key, secret)
 	if err != nil {
 		return nil, err
 	}
 
 	project := env.Project
 	result, err := storage.DB.CreateTOTPSetup(data.CreateTOTP{
-		Value:     encrypted,
+		Secret:    encrypted,
 		UserId:    input.String("id"),
 		ProjectId: project.Id,
 		MaxUsers:  project.MaxUsers,

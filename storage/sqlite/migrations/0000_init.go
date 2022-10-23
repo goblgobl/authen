@@ -31,7 +31,6 @@ func createTOTP(conn sqlite.Conn) error {
 		create table authen_totp_setups (
 			project_id text not null,
 			user_id text not null,
-			nonce blob not null,
 			secret blob not null,
 			created int not null default(unixepoch()),
 			primary key (project_id, user_id)
@@ -43,7 +42,6 @@ func createTOTP(conn sqlite.Conn) error {
 		create table authen_totps (
 			project_id text not null,
 			user_id text not null,
-			nonce blob not null,
 			secret blob not null,
 			created int not null default unixepoch,
 			primary key (project_id, user_id)

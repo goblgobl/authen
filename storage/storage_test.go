@@ -12,7 +12,7 @@ import (
 
 func Test_Configure_InvalidType(t *testing.T) {
 	err := Configure(typed.Typed{"type": "invalid"})
-	assert.Equal(t, err.Error(), "code: 100003 - storage.type is invalid. Should be one of: pg or sqlite")
+	assert.Equal(t, err.Error(), "code: 103003 - storage.type is invalid. Should be one of: pg or sqlite")
 }
 
 func Test_Configure_Sqlite(t *testing.T) {

@@ -59,11 +59,11 @@ func Test_Confirm_UnknownId(t *testing.T) {
 	request.ReqT(t, authen.BuildEnv().Env()).
 		Body(map[string]any{
 			"id":   tests.String(1, 100),
-			"key":  tests.String(32),
+			"key":  tests.HexKey(),
 			"code": "123456",
 		}).
 		Post(Confirm).
-		ExpectInvalid(101_006)
+		ExpectInvalid(102_006)
 }
 
 func Test_Confirm_WrongKey(t *testing.T) {
@@ -74,28 +74,28 @@ func Test_Confirm_WrongKey(t *testing.T) {
 		Body(map[string]any{
 			"id":   userId,
 			"code": "123456",
-			"key":  tests.String(32),
+			"key":  tests.HexKey(),
 		}).
 		Post(Confirm).
-		ExpectInvalid(101_007)
+		ExpectInvalid(102_007)
 }
 
 func Test_Confirm_WrongCode(t *testing.T) {
 	env := authen.BuildEnv().Env()
 	userId := tests.String(1, 100)
 
-	key := tests.String(32)
+	key, hexKey := tests.Key()
 	secret := gotp.RandomSecret(int(16))
 
 	tests.Factory.TOTPSetup.Insert("project_id", env.Project.Id, "user_id", userId, "secret", secret, "key", key)
 	request.ReqT(t, env).
 		Body(map[string]any{
 			"id":   userId,
-			"key":  key,
+			"key":  hexKey,
 			"code": "123456",
 		}).
 		Post(Confirm).
-		ExpectInvalid(101_008)
+		ExpectInvalid(102_008)
 }
 
 // do this twice, with the same user, to confirm that
@@ -104,8 +104,7 @@ func Test_Confirm_Success(t *testing.T) {
 	env := authen.BuildEnv().Env()
 	userId := tests.String(1, 100)
 
-	key := tests.String(32)
-
+	key, hexKey := tests.Key()
 	for i := 0; i < 2; i++ {
 		secret := gotp.RandomSecret(int(16))
 		totp := gotp.NewDefaultTOTP(secret)
@@ -114,7 +113,7 @@ func Test_Confirm_Success(t *testing.T) {
 		request.ReqT(t, env).
 			Body(map[string]any{
 				"id":   userId,
-				"key":  key,
+				"key":  hexKey,
 				"code": totp.Now(),
 			}).
 			Post(Confirm).OK()
@@ -126,8 +125,8 @@ func Test_Confirm_Success(t *testing.T) {
 		assert.Nowish(t, row.Time("created"))
 		assert.Equal(t, row.String("project_id"), env.Project.Id)
 
-		dbSecret, err := encryption.Decrypt([]byte(key), row["nonce"].([]byte), row["secret"].([]byte))
-		assert.Nil(t, err)
+		dbSecret, ok := encryption.Decrypt(key, row.Bytes("secret"))
+		assert.True(t, ok)
 		assert.Equal(t, string(dbSecret), secret)
 	}
 }

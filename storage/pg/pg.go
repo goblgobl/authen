@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	"src.goblgobl.com/utils/encryption"
 	"src.goblgobl.com/utils/pg"
 	"src.goblgobl.com/utils/typed"
 
@@ -103,7 +102,7 @@ func (db DB) GetUpdatedProjects(timestamp time.Time) ([]*data.Project, error) {
 }
 
 func (db DB) CreateTOTPSetup(opts data.CreateTOTP) (data.CreateTOTPResult, error) {
-	value := opts.Value
+	secret := opts.Secret
 	userId := opts.UserId
 	maxUsers := opts.MaxUsers
 	projectId := opts.ProjectId
@@ -124,10 +123,10 @@ func (db DB) CreateTOTPSetup(opts data.CreateTOTP) (data.CreateTOTPResult, error
 	}
 
 	_, err = db.Exec(context.Background(), `
-		insert into authen_totp_setups (project_id, user_id, nonce, secret)
-		values ($1, $2, $3, $4)
-		on conflict (project_id, user_id) do update set nonce = $3, secret = $4
-	`, projectId, userId, value.Nonce, value.Data)
+		insert into authen_totp_setups (project_id, user_id, secret)
+		values ($1, $2, $3)
+		on conflict (project_id, user_id) do update set secret = $3
+	`, projectId, userId, secret)
 
 	if err != nil {
 		return result, fmt.Errorf("PG.CreateTOTPSetup - %w", err)
@@ -138,16 +137,16 @@ func (db DB) CreateTOTPSetup(opts data.CreateTOTP) (data.CreateTOTPResult, error
 }
 
 func (db DB) CreateTOTP(opts data.CreateTOTP) (data.CreateTOTPResult, error) {
-	value := opts.Value
+	secret := opts.Secret
 	userId := opts.UserId
 	projectId := opts.ProjectId
 
 	err := db.Transaction(func(tx pgx.Tx) error {
 		_, err := db.Exec(context.Background(), `
-			insert into authen_totps (project_id, user_id, nonce, secret)
-			values ($1, $2, $3, $4)
-			on conflict (project_id, user_id) do update set nonce = $3, secret = $4
-		`, projectId, userId, value.Nonce, value.Data)
+			insert into authen_totps (project_id, user_id, secret)
+			values ($1, $2, $3)
+			on conflict (project_id, user_id) do update set secret = $3
+		`, projectId, userId, secret)
 
 		if err != nil {
 			return fmt.Errorf("PG.CreateTOTP (upsert) - %w", err)
@@ -175,13 +174,13 @@ func (db DB) GetTOTPSetup(opts data.GetTOTPSetup) (data.GetTOTPSetupResult, erro
 	var result data.GetTOTPSetupResult
 
 	row := db.QueryRow(context.Background(), `
-		select nonce, secret
+		select secret
 		from authen_totp_setups
 		where project_id = $1 and user_id = $2
 	`, projectId, userId)
 
-	var nonce, secret []byte
-	if err := row.Scan(&nonce, &secret); err != nil {
+	var secret []byte
+	if err := row.Scan(&secret); err != nil {
 		if err == pg.ErrNoRows {
 			result.Status = data.GET_TOTP_SETUP_NOT_FOUND
 			return result, nil
@@ -190,8 +189,8 @@ func (db DB) GetTOTPSetup(opts data.GetTOTPSetup) (data.GetTOTPSetupResult, erro
 	}
 
 	return data.GetTOTPSetupResult{
+		Secret: secret,
 		Status: data.GET_TOTP_SETUP_OK,
-		Value:  encryption.Value{Nonce: nonce, Data: secret},
 	}, nil
 }
 

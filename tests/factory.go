@@ -1,12 +1,11 @@
 package tests
 
 import (
-	"strings"
+	"encoding/hex"
 	"time"
 
 	"src.goblgobl.com/authen/storage"
 	f "src.goblgobl.com/tests/factory"
-	"src.goblgobl.com/utils"
 	"src.goblgobl.com/utils/encryption"
 	"src.goblgobl.com/utils/uuid"
 )
@@ -40,19 +39,29 @@ func init() {
 		return f.KV{
 			"project_id": args.UUID("project_id", uuid.String()),
 			"user_id":    args.String("user_id", uuid.String()),
-			"nonce":      args.String("nonce", ""),
 			"secret":     args.String("secret", ""),
 			"created":    args.Time("created", time.Now()),
 		}
 	})
 
 	Factory.TOTPSetup = f.NewTable("authen_totp_setups", func(args f.KV) f.KV {
-		var enc encryption.Value
-		secret := args.String("secret", "").(string)
-		if secret != "" {
+		var encryptedSecret []byte
+		if secret := args.String("secret", "").(string); secret != "" {
 			var err error
-			key := args.String("key", strings.Repeat("a", 32)).(string)
-			enc, err = encryption.Encrypt(utils.S2B(key), secret)
+			var key [32]byte
+			switch t := args["key"].(type) {
+			case [32]byte:
+				key = t
+			case string:
+				slice, err := hex.DecodeString(t)
+				if err != nil {
+					panic(err)
+				}
+				key = *(*[32]byte)(slice)
+			default:
+				key = [32]byte{1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8}
+			}
+			encryptedSecret, err = encryption.Encrypt(key, secret)
 			if err != nil {
 				panic(err)
 			}
@@ -60,8 +69,7 @@ func init() {
 		return f.KV{
 			"project_id": args.UUID("project_id", uuid.String()),
 			"user_id":    args.String("user_id", uuid.String()),
-			"secret":     enc.Data,
-			"nonce":      enc.Nonce,
+			"secret":     encryptedSecret,
 			"created":    args.Time("created", time.Now()),
 		}
 	})
