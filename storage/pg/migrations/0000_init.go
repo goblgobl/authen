@@ -2,6 +2,7 @@ package migrations
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -26,13 +27,13 @@ func createProjects(tx pgx.Tx) error {
 			created timestamptz not null default now(),
 			updated timestamptz not null default now()
 		)`); err != nil {
-		return err
+		return fmt.Errorf("pg 0000 migration authen_projects - %w", err)
 	}
 
 	if _, err := tx.Exec(bg, `
 		create index authen_projects_updated on authen_projects(updated)
 	`); err != nil {
-		return err
+		return fmt.Errorf("pg 0000 migration authen_projects_updated - %w", err)
 	}
 	return nil
 }
@@ -47,7 +48,7 @@ func createTOTP(tx pgx.Tx) error {
 			created timestamptz not null default now(),
 			primary key (project_id, user_id)
 		)`); err != nil {
-		return err
+		return fmt.Errorf("pg 0000 migration authen_totp_setups - %w", err)
 	}
 
 	if _, err := tx.Exec(bg, `
@@ -58,7 +59,7 @@ func createTOTP(tx pgx.Tx) error {
 			created timestamptz not null default now(),
 			primary key (project_id, user_id)
 		)`); err != nil {
-		return err
+		return fmt.Errorf("pg 0000 migration authen_totps - %w", err)
 	}
 
 	return nil

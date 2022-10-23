@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"strings"
 	"time"
 
 	"src.goblgobl.com/authen/codes"
@@ -32,13 +33,14 @@ type Storage interface {
 }
 
 func Configure(config typed.Typed) (err error) {
-	switch config.String("type") {
-	case "pg":
-		DB, err = pg.New(config)
+	tpe := strings.ToLower(config.String("type"))
+	switch tpe {
+	case "pg", "cr":
+		DB, err = pg.New(config, tpe)
 	case "sqlite":
 		DB, err = sqlite.New(config)
 	default:
-		err = log.Errf(codes.ERR_INVALID_STORAGE_TYPE, "storage.type is invalid. Should be one of: pg or sqlite")
+		err = log.Errf(codes.ERR_INVALID_STORAGE_TYPE, "storage.type is invalid. Should be one of: pg, cr or sqlite")
 	}
 	return
 }

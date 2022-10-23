@@ -16,14 +16,15 @@ import (
 
 type DB struct {
 	pg.DB
+	tpe string
 }
 
-func New(config typed.Typed) (DB, error) {
+func New(config typed.Typed, tpe string) (DB, error) {
 	db, err := pg.New(config.String("url"))
 	if err != nil {
 		return DB{}, fmt.Errorf("PG.New - %w", err)
 	}
-	return DB{db}, nil
+	return DB{db, tpe}, nil
 }
 
 func (db DB) Ping() error {
@@ -48,7 +49,7 @@ func (db DB) Info() (any, error) {
 		Type      string `json:"type"`
 		Migration int    `json:"migration"`
 	}{
-		Type:      "pg",
+		Type:      db.tpe,
 		Migration: migration,
 	}, nil
 }

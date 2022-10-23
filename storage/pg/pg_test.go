@@ -14,8 +14,15 @@ import (
 var db DB
 
 func init() {
+	url := tests.PG()
+	tpe := tests.StorageType()
+
+	if tpe == "cr" {
+		url = tests.CR()
+	}
+
 	var err error
-	db, err = New(typed.Typed{"url": tests.PG()})
+	db, err = New(typed.Typed{"url": url}, tpe)
 	if err != nil {
 		panic(err)
 	}

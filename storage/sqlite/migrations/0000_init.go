@@ -1,6 +1,8 @@
 package migrations
 
 import (
+	"fmt"
+
 	"src.goblgobl.com/utils/sqlite"
 )
 
@@ -16,7 +18,7 @@ func Migrate_0000(conn sqlite.Conn) error {
 }
 
 func createProjects(conn sqlite.Conn) error {
-	return conn.Exec(`
+	err := conn.Exec(`
 		create table authen_projects (
 			id text not null primary key,
 			issuer text not null,
@@ -24,6 +26,12 @@ func createProjects(conn sqlite.Conn) error {
 			created int not null default(unixepoch()),
 			updated int not null default(unixepoch())
 	)`)
+
+	if err != nil {
+		return fmt.Errorf("sqlite 0000 authen_projects - %w", err)
+	}
+
+	return nil
 }
 
 func createTOTP(conn sqlite.Conn) error {
@@ -35,7 +43,7 @@ func createTOTP(conn sqlite.Conn) error {
 			created int not null default(unixepoch()),
 			primary key (project_id, user_id)
 	)`); err != nil {
-		return err
+		return fmt.Errorf("sqlite 0000 authen_totp_setups - %w", err)
 	}
 
 	if err := conn.Exec(`
@@ -46,7 +54,7 @@ func createTOTP(conn sqlite.Conn) error {
 			created int not null default unixepoch,
 			primary key (project_id, user_id)
 	)`); err != nil {
-		return err
+		return fmt.Errorf("sqlite 0000 authen_totps - %w", err)
 	}
 
 	return nil
