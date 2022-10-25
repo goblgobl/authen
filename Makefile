@@ -1,25 +1,25 @@
 F=
 
 .PHONY: t
-t: commit.txt tsqlite tpg tcr
+t: commit.txt t_sqlite t_pg t_cr
 
-.PHONY: tsqlite
-tsqlite:
+.PHONY: t_sqlite
+t_sqlite:
 	@printf "\nrunning tests against sqlite\n"
 	@GOBL_TEST_STORAGE=sqlite go test -count=1 ./... -run "${F}" \
 		| grep -v "no tests to run" \
 		| grep -v "no test files"
 
 
-.PHONY: tpg
-tpg:
+.PHONY: t_pg
+t_pg:
 	@printf "\nrunning tests against postgres\n"
 	@GOBL_TEST_STORAGE=pg go test -count=1 ./... -run "${F}" \
 		| grep -v "no tests to run" \
 		| grep -v "no test files"
 
-.PHONY: tcr
-tcr:
+.PHONY: t_cr
+t_cr:
 	@printf "\nrunning tests against cockroachdb\n"
 	@GOBL_TEST_STORAGE=cr go test -count=1 ./... -run "${F}" \
 		| grep -v "no tests to run" \

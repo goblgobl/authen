@@ -6,7 +6,6 @@ import (
 	"github.com/valyala/fasthttp"
 	"github.com/xlzd/gotp"
 	"src.goblgobl.com/authen"
-	"src.goblgobl.com/authen/codes"
 	"src.goblgobl.com/authen/storage"
 	"src.goblgobl.com/authen/storage/data"
 	"src.goblgobl.com/utils"
@@ -17,39 +16,30 @@ import (
 )
 
 var (
-	confirmValidation = validation.Input().
-				Field(idValidation).
-				Field(keyValidation).
-				Field(typeValidation).
-				Field(codeValidation)
-
-	resNotFound      = http.StaticError(400, codes.RES_TOTP_NOT_FOUND, "TOTP not found")
-	resIncorrectKey  = http.StaticError(400, codes.RES_TOTP_INCORRECT_KEY, "key is not correct")
-	resIncorrectCode = http.StaticError(400, codes.RES_TOTP_INCORRECT_CODE, "code is not correct")
-	resOK            = http.Ok(nil)
+	verifyValidation = validation.Input().
+		Field(idValidation).
+		Field(keyValidation).
+		Field(typeValidation).
+		Field(codeValidation)
 )
 
-func Confirm(conn *fasthttp.RequestCtx, env *authen.Env) (http.Response, error) {
+func Verify(conn *fasthttp.RequestCtx, env *authen.Env) (http.Response, error) {
 	input, err := typed.Json(conn.PostBody())
 	if err != nil {
 		return http.InvalidJSON, nil
 	}
 
 	validator := env.Validator
-	if !confirmValidation.Validate(input, validator) {
+	if !verifyValidation.Validate(input, validator) {
 		return http.Validation(validator), nil
 	}
 
 	project := env.Project
-	projectId := project.Id
-	tpe := input.String("type")
-	userId := input.String("id")
-
 	result, err := storage.DB.GetTOTP(data.GetTOTP{
-		Type:      tpe,
-		Pending:   true,
-		UserId:    userId,
-		ProjectId: projectId,
+		Type:      input.String("type"),
+		UserId:    input.String("id"),
+		Pending:   false,
+		ProjectId: project.Id,
 	})
 	if err != nil {
 		return nil, err
@@ -69,13 +59,5 @@ func Confirm(conn *fasthttp.RequestCtx, env *authen.Env) (http.Response, error) 
 	if !totp.VerifyTime(input.String("code"), time.Now()) {
 		return resIncorrectCode, nil
 	}
-
-	_, err = storage.DB.CreateTOTP(data.CreateTOTP{
-		UserId:    userId,
-		Type:      tpe,
-		ProjectId: projectId,
-		Secret:    encrypted,
-	})
-
-	return resOK, err
+	return resOK, nil
 }

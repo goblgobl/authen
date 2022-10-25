@@ -3,6 +3,7 @@ package totp
 import (
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/xlzd/gotp"
 	"src.goblgobl.com/authen"
@@ -66,10 +67,27 @@ func Test_Confirm_UnknownId(t *testing.T) {
 		ExpectInvalid(102_006)
 }
 
+func Test_Confirm_Expired(t *testing.T) {
+	env := authen.BuildEnv().Env()
+	userId := tests.String(1, 100)
+	key, hexKey := tests.Key()
+	secret := gotp.RandomSecret(int(16))
+	totp := gotp.NewDefaultTOTP(secret)
+
+	tests.Factory.TOTP.Insert("project_id", env.Project.Id, "user_id", userId, "secret", secret, "key", key, "pending", true, "expires", time.Now().Add(-time.Second))
+	request.ReqT(t, env).
+		Body(map[string]any{
+			"id":   userId,
+			"key":  hexKey,
+			"code": totp.Now(),
+		}).
+		Post(Confirm).ExpectInvalid(102_006)
+}
+
 func Test_Confirm_WrongKey(t *testing.T) {
 	env := authen.BuildEnv().Env()
 	userId := tests.String(1, 100)
-	tests.Factory.TOTPSetup.Insert("project_id", env.Project.Id, "user_id", userId, "secret", "a")
+	tests.Factory.TOTP.Insert("project_id", env.Project.Id, "user_id", userId, "secret", "a", "pending", true, "expires", time.Now().Add(time.Minute))
 	request.ReqT(t, env).
 		Body(map[string]any{
 			"id":   userId,
@@ -87,7 +105,7 @@ func Test_Confirm_WrongCode(t *testing.T) {
 	key, hexKey := tests.Key()
 	secret := gotp.RandomSecret(int(16))
 
-	tests.Factory.TOTPSetup.Insert("project_id", env.Project.Id, "user_id", userId, "secret", secret, "key", key)
+	tests.Factory.TOTP.Insert("project_id", env.Project.Id, "user_id", userId, "secret", secret, "key", key, "pending", true, "expires", time.Now().Add(time.Minute))
 	request.ReqT(t, env).
 		Body(map[string]any{
 			"id":   userId,
@@ -100,7 +118,7 @@ func Test_Confirm_WrongCode(t *testing.T) {
 
 // do this twice, with the same user, to confirm that
 // upsert works
-func Test_Confirm_Success(t *testing.T) {
+func Test_Confirm_Without_Type(t *testing.T) {
 	env := authen.BuildEnv().Env()
 	userId := tests.String(1, 100)
 
@@ -109,7 +127,7 @@ func Test_Confirm_Success(t *testing.T) {
 		secret := gotp.RandomSecret(int(16))
 		totp := gotp.NewDefaultTOTP(secret)
 
-		tests.Factory.TOTPSetup.Insert("project_id", env.Project.Id, "user_id", userId, "secret", secret, "key", key)
+		tests.Factory.TOTP.Insert("project_id", env.Project.Id, "user_id", userId, "secret", secret, "key", key, "pending", true, "expires", time.Now().Add(time.Minute))
 		request.ReqT(t, env).
 			Body(map[string]any{
 				"id":   userId,
@@ -118,11 +136,51 @@ func Test_Confirm_Success(t *testing.T) {
 			}).
 			Post(Confirm).OK()
 
-		row := tests.Row("select * from authen_totp_setups where user_id = $1", userId)
+		row := tests.Row("select * from authen_totps where user_id = $1 and pending", userId)
 		assert.Nil(t, row)
 
 		row = tests.Row("select * from authen_totps where user_id = $1", userId)
 		assert.Nowish(t, row.Time("created"))
+		assert.False(t, row.Bool("pending"))
+		assert.Equal(t, row.String("type"), "")
+		assert.Nil(t, row["expires"])
+		assert.Equal(t, row.String("project_id"), env.Project.Id)
+
+		dbSecret, ok := encryption.Decrypt(key, row.Bytes("secret"))
+		assert.True(t, ok)
+		assert.Equal(t, string(dbSecret), secret)
+	}
+}
+
+// do this twice, with the same user, to confirm that
+// upsert works
+func Test_Confirm_With_Type(t *testing.T) {
+	env := authen.BuildEnv().Env()
+	userId := tests.String(1, 100)
+
+	key, hexKey := tests.Key()
+	for i := 0; i < 2; i++ {
+		secret := gotp.RandomSecret(int(16))
+		totp := gotp.NewDefaultTOTP(secret)
+
+		tests.Factory.TOTP.Insert("project_id", env.Project.Id, "user_id", userId, "secret", secret, "type", "t1x", "key", key, "pending", true, "expires", time.Now().Add(time.Minute))
+		request.ReqT(t, env).
+			Body(map[string]any{
+				"id":   userId,
+				"key":  hexKey,
+				"type": "t1x",
+				"code": totp.Now(),
+			}).
+			Post(Confirm).OK()
+
+		row := tests.Row("select * from authen_totps where user_id = $1 and pending", userId)
+		assert.Nil(t, row)
+
+		row = tests.Row("select * from authen_totps where user_id = $1", userId)
+		assert.Nowish(t, row.Time("created"))
+		assert.False(t, row.Bool("pending"))
+		assert.Equal(t, row.String("type"), "t1x")
+		assert.Nil(t, row["expires"])
 		assert.Equal(t, row.String("project_id"), env.Project.Id)
 
 		dbSecret, ok := encryption.Decrypt(key, row.Bytes("secret"))

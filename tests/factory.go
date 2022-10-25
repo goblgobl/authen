@@ -11,9 +11,8 @@ import (
 )
 
 type factory struct {
-	Project   f.Table
-	TOTP      f.Table
-	TOTPSetup f.Table
+	Project f.Table
+	TOTP    f.Table
 }
 
 var (
@@ -27,25 +26,17 @@ func init() {
 	f.DB = storage.DB.(f.SQLStorage)
 	Factory.Project = f.NewTable("authen_projects", func(args f.KV) f.KV {
 		return f.KV{
-			"id":        args.UUID("id", uuid.String()),
-			"issuer":    args.String("issuer", ""),
-			"max_users": args.Int("max_users", 100),
-			"created":   args.Time("created", time.Now()),
-			"updated":   args.Time("updated", time.Now()),
+			"id":             args.UUID("id", uuid.String()),
+			"issuer":         args.String("issuer", ""),
+			"totp_max":       args.Int("totp_max", 100),
+			"totp_setup_ttl": args.Int("totp_setup_ttl", 120),
+			"created":        args.Time("created", time.Now()),
+			"updated":        args.Time("updated", time.Now()),
 		}
 	})
 
 	Factory.TOTP = f.NewTable("authen_totps", func(args f.KV) f.KV {
-		return f.KV{
-			"project_id": args.UUID("project_id", uuid.String()),
-			"user_id":    args.String("user_id", uuid.String()),
-			"secret":     args.String("secret", ""),
-			"created":    args.Time("created", time.Now()),
-		}
-	})
-
-	Factory.TOTPSetup = f.NewTable("authen_totp_setups", func(args f.KV) f.KV {
-		var encryptedSecret []byte
+		encryptedSecret := []byte{1}
 		if secret := args.String("secret", "").(string); secret != "" {
 			var err error
 			var key [32]byte
@@ -66,10 +57,14 @@ func init() {
 				panic(err)
 			}
 		}
+
 		return f.KV{
 			"project_id": args.UUID("project_id", uuid.String()),
 			"user_id":    args.String("user_id", uuid.String()),
+			"type":       args.String("type", ""),
+			"pending":    args.Bool("pending", false),
 			"secret":     encryptedSecret,
+			"expires":    args.Time("expires"),
 			"created":    args.Time("created", time.Now()),
 		}
 	})

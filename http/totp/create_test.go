@@ -59,7 +59,7 @@ func Test_Create_InvalidData(t *testing.T) {
 // This is a big tests that does everything. We run it twice,
 // for the same user, to make sure a given user can only have
 // a single active totp setup
-func Test_Create_TOTP_Success(t *testing.T) {
+func Test_Create_TOTP_Without_Type(t *testing.T) {
 	userId := tests.String(1, 100)
 	env := authen.BuildEnv().Env()
 
@@ -78,7 +78,10 @@ func Test_Create_TOTP_Success(t *testing.T) {
 		secret := res.String("secret")
 		assert.Equal(t, len(secret), 26)
 
-		row := tests.Row("select * from authen_totp_setups where user_id = $1", userId)
+		row := tests.Row("select * from authen_totps where user_id = $1", userId)
+		assert.Equal(t, row.Bool("pending"), true)
+		assert.Nowish(t, row.Time("created"))
+		assert.Equal(t, row.String("type"), "")
 		assert.Equal(t, row.String("project_id"), env.Project.Id)
 		dbSecret, ok := encryption.Decrypt(key, row.Bytes("secret"))
 		assert.True(t, ok)
@@ -106,9 +109,33 @@ func Test_Create_TOTP_Success(t *testing.T) {
 	}
 }
 
-func Test_Create_TOTP_MaxUsers(t *testing.T) {
+func Test_Create_TOTP_With_Type(t *testing.T) {
+	userId := tests.String(1, 100)
+	env := authen.BuildEnv().TOTPSetupTTL(22).Env()
+
+	for i := 0; i < 2; i++ {
+
+		res := request.ReqT(t, env).
+			Body(map[string]any{
+				"key":     tests.HexKey(),
+				"id":      userId,
+				"type":    "t1",
+				"issuer":  "test-issuer",
+				"account": "test-account",
+			}).
+			Post(Create).OK().JSON()
+
+		secret := res.String("secret")
+		assert.Equal(t, len(secret), 26)
+
+		row := tests.Row("select * from authen_totps where user_id = $1", userId)
+		assert.Equal(t, row.String("type"), "t1")
+	}
+}
+
+func Test_Create_TOTP_MaxTOTPs(t *testing.T) {
 	projectId := tests.UUID()
-	env := authen.BuildEnv().ProjectId(projectId).MaxUsers(2).Env()
+	env := authen.BuildEnv().ProjectId(projectId).TOTPMax(2).Env()
 
 	tests.Factory.TOTP.Insert("project_id", projectId)
 	tests.Factory.TOTP.Insert("project_id", projectId)

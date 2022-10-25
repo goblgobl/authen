@@ -23,7 +23,8 @@ func createProjects(tx pgx.Tx) error {
 		create table authen_projects (
 			id uuid not null primary key,
 			issuer text not null,
-			max_users int not null,
+			totp_max int not null,
+			totp_setup_ttl int not null,
 			created timestamptz not null default now(),
 			updated timestamptz not null default now()
 		)`); err != nil {
@@ -39,25 +40,16 @@ func createProjects(tx pgx.Tx) error {
 }
 
 func createTOTP(tx pgx.Tx) error {
-	bg := context.Background()
-	if _, err := tx.Exec(bg, `
-		create table authen_totp_setups (
-			project_id uuid not null,
-			user_id text not null,
-			secret bytea not null,
-			created timestamptz not null default now(),
-			primary key (project_id, user_id)
-		)`); err != nil {
-		return fmt.Errorf("pg 0000 migration authen_totp_setups - %w", err)
-	}
-
-	if _, err := tx.Exec(bg, `
+	if _, err := tx.Exec(context.Background(), `
 		create table authen_totps (
 			project_id uuid not null,
 			user_id text not null,
+			type text not null,
+			pending bool not null,
 			secret bytea not null,
+			expires timestamptz null,
 			created timestamptz not null default now(),
-			primary key (project_id, user_id)
+			primary key (project_id, user_id, type, pending)
 		)`); err != nil {
 		return fmt.Errorf("pg 0000 migration authen_totps - %w", err)
 	}

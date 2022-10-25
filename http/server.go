@@ -42,6 +42,7 @@ func handler() func(ctx *fasthttp.RequestCtx) {
 	r.GET("/v1/info", misc.Info)
 
 	r.POST("/v1/totp", envHandler("totp_create", totp.Create))
+	r.POST("/v1/totp/verify", envHandler("totp_verify", totp.Verify))
 	r.POST("/v1/totp/confirm", envHandler("totp_confirm", totp.Confirm))
 
 	r.NotFound = func(ctx *fasthttp.RequestCtx) {

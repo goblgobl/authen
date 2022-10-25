@@ -5,6 +5,8 @@
 package authen
 
 import (
+	"time"
+
 	"src.goblgobl.com/authen/config"
 	"src.goblgobl.com/utils/log"
 	"src.goblgobl.com/utils/uuid"
@@ -34,8 +36,13 @@ func (eb *EnvBuilder) ProjectId(id string) *EnvBuilder {
 	return eb
 }
 
-func (eb *EnvBuilder) MaxUsers(max uint32) *EnvBuilder {
-	eb.project.MaxUsers = max
+func (eb *EnvBuilder) TOTPMax(max uint32) *EnvBuilder {
+	eb.project.TOTPMax = max
+	return eb
+}
+
+func (eb *EnvBuilder) TOTPSetupTTL(max uint32) *EnvBuilder {
+	eb.project.TOTPSetupTTL = time.Duration(max) * time.Second
 	return eb
 }
 

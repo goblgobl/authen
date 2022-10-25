@@ -1,6 +1,7 @@
 module src.goblgobl.com/authen
 
 replace src.goblgobl.com/utils => ../utils
+replace src.goblgobl.com/sqlite => ../sqlite
 
 replace src.goblgobl.com/tests => ../tests
 

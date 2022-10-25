@@ -27,9 +27,10 @@ type Project struct {
 	// the pid=$id field
 	logField log.Field
 
-	Id       string
-	Issuer   string `json:"issuer"`
-	MaxUsers uint32 `json:"max_users"`
+	Id           string
+	Issuer       string        `json:"issuer"`
+	TOTPMax      uint32        `json:"totp_max"`
+	TOTPSetupTTL time.Duration `json:"totp_setup_ttl"`
 }
 
 func (p *Project) NextRequestId() string {
@@ -49,10 +50,11 @@ func createProjectFromProjectData(projectData *data.Project) *Project {
 	id := projectData.Id
 
 	return &Project{
-		Id:       id,
-		Issuer:   projectData.Issuer,
-		MaxUsers: projectData.MaxUsers,
-		logField: log.NewField().String("pid", id).Finalize(),
+		Id:           id,
+		Issuer:       projectData.Issuer,
+		TOTPMax:      projectData.TOTPMax,
+		TOTPSetupTTL: time.Duration(projectData.TOTPSetupTTL) * time.Second,
+		logField:     log.NewField().String("pid", id).Finalize(),
 
 		// If we let this start at 0, then restarts are likely to produce duplicates.
 		// While we make no guarantees about the uniqueness of the requestId, there's

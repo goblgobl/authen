@@ -2,6 +2,7 @@ package totp
 
 import (
 	"encoding/base64"
+	"time"
 
 	"src.goblgobl.com/authen"
 	"src.goblgobl.com/authen/codes"
@@ -21,10 +22,11 @@ var (
 	createValidation = validation.Input().
 				Field(idValidation).
 				Field(keyValidation).
+				Field(typeValidation).
 				Field(validation.String("account").Required().Length(1, 100)).
 				Field(validation.String("issuer").Length(1, 100))
 
-	resMaxUsers = http.StaticError(400, codes.RES_TOTP_MAX_USERS, "maximum number of users reached")
+	resMax = http.StaticError(400, codes.RES_TOTP_MAX, "maximum number of TOTPs reached")
 )
 
 func Create(conn *fasthttp.RequestCtx, env *authen.Env) (http.Response, error) {
@@ -59,18 +61,21 @@ func Create(conn *fasthttp.RequestCtx, env *authen.Env) (http.Response, error) {
 	}
 
 	project := env.Project
-	result, err := storage.DB.CreateTOTPSetup(data.CreateTOTP{
+	expires := time.Now().Add(project.TOTPSetupTTL)
+	result, err := storage.DB.CreateTOTP(data.CreateTOTP{
 		Secret:    encrypted,
 		UserId:    input.String("id"),
+		Type:      input.String("type"),
+		Expires:   &expires,
 		ProjectId: project.Id,
-		MaxUsers:  project.MaxUsers,
+		Max:       project.TOTPMax,
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	if result.Status == data.CREATE_TOTP_MAX_USERS {
-		return resMaxUsers, nil
+	if result.Status == data.CREATE_TOTP_MAX {
+		return resMax, nil
 	}
 
 	return http.Ok(struct {
