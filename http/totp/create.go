@@ -62,7 +62,7 @@ func Create(conn *fasthttp.RequestCtx, env *authen.Env) (http.Response, error) {
 
 	project := env.Project
 	expires := time.Now().Add(project.TOTPSetupTTL)
-	result, err := storage.DB.CreateTOTP(data.CreateTOTP{
+	result, err := storage.DB.TOTPCreate(data.TOTPCreate{
 		Secret:    encrypted,
 		Type:      input.String("type"),
 		UserId:    input.String("user_id"),
@@ -74,7 +74,7 @@ func Create(conn *fasthttp.RequestCtx, env *authen.Env) (http.Response, error) {
 		return nil, err
 	}
 
-	if result.Status == data.CREATE_TOTP_MAX {
+	if result.Status == data.TOTP_CREATE_MAX {
 		return resMax, nil
 	}
 

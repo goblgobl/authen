@@ -95,7 +95,7 @@ func (c Conn) GetUpdatedProjects(timestamp time.Time) ([]*data.Project, error) {
 	return projects, nil
 }
 
-func (c Conn) CreateTOTP(opts data.CreateTOTP) (data.CreateTOTPResult, error) {
+func (c Conn) TOTPCreate(opts data.TOTPCreate) (data.TOTPCreateResult, error) {
 	max := opts.Max
 	tpe := opts.Type
 	secret := opts.Secret
@@ -104,19 +104,19 @@ func (c Conn) CreateTOTP(opts data.CreateTOTP) (data.CreateTOTPResult, error) {
 	pending := expires != nil
 	projectId := opts.ProjectId
 
-	var result data.CreateTOTPResult
+	var result data.TOTPCreateResult
 
 	// Since we check first, then add the user (outside of a transaction)
 	// concurrent calls to this might result in going a little over max
 	// but I'm ok with that in the name of minimizing the DB calls
 	// we need to make inside a transaction.
-	canAdd, err := c.canAddTOTP(projectId, userId, tpe, max)
+	canAdd, err := c.totpCanAdd(projectId, userId, tpe, max)
 	if err != nil {
 		return result, err
 	}
 
 	if !canAdd {
-		result.Status = data.CREATE_TOTP_MAX
+		result.Status = data.TOTP_CREATE_MAX
 		return result, nil
 	}
 
@@ -127,7 +127,7 @@ func (c Conn) CreateTOTP(opts data.CreateTOTP) (data.CreateTOTPResult, error) {
 		`, projectId, userId, tpe, pending, secret, expires)
 
 		if err != nil {
-			return fmt.Errorf("Sqlite.CreateTOTP (upsert) - %w", err)
+			return fmt.Errorf("Sqlite.TOTPCreate (upsert) - %w", err)
 		}
 
 		if pending {
@@ -145,22 +145,22 @@ func (c Conn) CreateTOTP(opts data.CreateTOTP) (data.CreateTOTPResult, error) {
 		`, projectId, userId, tpe)
 
 		if err != nil {
-			return fmt.Errorf("Sqlite.CreateTOTP (delete) - %w", err)
+			return fmt.Errorf("Sqlite.TOTPCreate (delete) - %w", err)
 		}
 
 		return nil
 	})
 
-	result.Status = data.CREATE_TOTP_OK
+	result.Status = data.TOTP_CREATE_OK
 	return result, err
 }
 
-func (c Conn) GetTOTP(opts data.GetTOTP) (data.GetTOTPResult, error) {
+func (c Conn) TOTPGet(opts data.TOTPGet) (data.TOTPGetResult, error) {
 	tpe := opts.Type
 	userId := opts.UserId
 	pending := opts.Pending
 	projectId := opts.ProjectId
-	var result data.GetTOTPResult
+	var result data.TOTPGetResult
 
 	row := c.Row(`
 		select secret
@@ -175,19 +175,19 @@ func (c Conn) GetTOTP(opts data.GetTOTP) (data.GetTOTPResult, error) {
 	var secret []byte
 	if err := row.Scan(&secret); err != nil {
 		if err == sqlite.ErrNoRows {
-			result.Status = data.GET_TOTP_NOT_FOUND
+			result.Status = data.TOTP_GET_NOT_FOUND
 			return result, nil
 		}
-		return result, fmt.Errorf("Sqlite.GetTOTP - %w", err)
+		return result, fmt.Errorf("Sqlite.TOTPGet - %w", err)
 	}
 
-	return data.GetTOTPResult{
+	return data.TOTPGetResult{
 		Secret: secret,
-		Status: data.GET_TOTP_OK,
+		Status: data.TOTP_GET_OK,
 	}, nil
 }
 
-func (c Conn) DeleteTOTP(opts data.GetTOTP) error {
+func (c Conn) TOTPDelete(opts data.TOTPGet) error {
 	tpe := opts.Type
 	userId := opts.UserId
 	projectId := opts.ProjectId
@@ -200,13 +200,13 @@ func (c Conn) DeleteTOTP(opts data.GetTOTP) error {
 	`, projectId, userId, tpe)
 
 	if err != nil {
-		return fmt.Errorf("Sqlite.DeleteTOTP - %w", err)
+		return fmt.Errorf("Sqlite.TOTPDelete - %w", err)
 	}
 
 	return nil
 }
 
-func (c Conn) canAddTOTP(projectId string, userId string, tpe string, max uint32) (bool, error) {
+func (c Conn) totpCanAdd(projectId string, userId string, tpe string, max uint32) (bool, error) {
 	// no limit
 	if max == 0 {
 		return true, nil
@@ -223,7 +223,7 @@ func (c Conn) canAddTOTP(projectId string, userId string, tpe string, max uint32
 		)`, projectId, userId, tpe)
 
 	if err != nil {
-		return false, fmt.Errorf("Sqlite.canAddTOTP (exists) - %w", err)
+		return false, fmt.Errorf("Sqlite.totpCanAdd (exists) - %w", err)
 	}
 
 	if exists {
@@ -237,7 +237,7 @@ func (c Conn) canAddTOTP(projectId string, userId string, tpe string, max uint32
 	`, projectId)
 
 	if err != nil {
-		return false, fmt.Errorf("Sqlite.canAddTOTP (count) - %w", err)
+		return false, fmt.Errorf("Sqlite.totpCanAdd (count) - %w", err)
 	}
 	return count < int(max), nil
 }

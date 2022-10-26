@@ -34,7 +34,7 @@ func Verify(conn *fasthttp.RequestCtx, env *authen.Env) (http.Response, error) {
 		return http.Validation(validator), nil
 	}
 
-	result, err := storage.DB.GetTOTP(data.GetTOTP{
+	result, err := storage.DB.TOTPGet(data.TOTPGet{
 		Type:      input.String("type"),
 		UserId:    input.String("user_id"),
 		Pending:   false,
@@ -43,7 +43,7 @@ func Verify(conn *fasthttp.RequestCtx, env *authen.Env) (http.Response, error) {
 	if err != nil {
 		return nil, err
 	}
-	if result.Status == data.GET_TOTP_NOT_FOUND {
+	if result.Status == data.TOTP_GET_NOT_FOUND {
 		return resNotFound, nil
 	}
 

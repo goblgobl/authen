@@ -85,7 +85,7 @@ func Test_GetUpdatedProjects_Success(t *testing.T) {
 	assert.True(t, actual2 == id3 || actual2 == id4)
 }
 
-func Test_CreateTOTP(t *testing.T) {
+func Test_TOTPCreate(t *testing.T) {
 	now := time.Now()
 	projectId1, projectId2 := uuid.String(), uuid.String()
 
@@ -99,7 +99,7 @@ func Test_CreateTOTP(t *testing.T) {
 	for i, expires := range []*time.Time{nil, &now} {
 		secret := []byte{byte(i), byte(i)}
 		tpe := fmt.Sprintf("t-%d", i)
-		res, err := db.CreateTOTP(data.CreateTOTP{
+		res, err := db.TOTPCreate(data.TOTPCreate{
 			Max:       4,
 			UserId:    "u1",
 			Type:      tpe,
@@ -108,7 +108,7 @@ func Test_CreateTOTP(t *testing.T) {
 			ProjectId: projectId1,
 		})
 		assert.Nil(t, err)
-		assert.Equal(t, res.Status, data.CREATE_TOTP_OK)
+		assert.Equal(t, res.Status, data.TOTP_CREATE_OK)
 
 		row, _ := db.RowToMap("select * from authen_totps where project_id = $1 and user_id = $2 and type = $3 and pending = $4", projectId1, "u1", tpe, expires != nil)
 		assert.Nowish(t, row.Time("created"))
@@ -124,7 +124,7 @@ func Test_CreateTOTP(t *testing.T) {
 
 	// can't add any more, pending or not:
 	for _, expires := range []*time.Time{nil, &now} {
-		res, err := db.CreateTOTP(data.CreateTOTP{
+		res, err := db.TOTPCreate(data.TOTPCreate{
 			Max:       4,
 			UserId:    "u4",
 			Type:      "",
@@ -133,12 +133,12 @@ func Test_CreateTOTP(t *testing.T) {
 			Secret:    []byte{13, 14},
 		})
 		assert.Nil(t, err)
-		assert.Equal(t, res.Status, data.CREATE_TOTP_MAX)
+		assert.Equal(t, res.Status, data.TOTP_CREATE_MAX)
 	}
 
 	// 0 == no limit
 	{
-		res, err := db.CreateTOTP(data.CreateTOTP{
+		res, err := db.TOTPCreate(data.TOTPCreate{
 			Max:       0,
 			UserId:    "u4",
 			Type:      "t4",
@@ -146,7 +146,7 @@ func Test_CreateTOTP(t *testing.T) {
 			Secret:    []byte{23, 24},
 		})
 		assert.Nil(t, err)
-		assert.Equal(t, res.Status, data.CREATE_TOTP_OK)
+		assert.Equal(t, res.Status, data.TOTP_CREATE_OK)
 		row, _ := db.RowToMap("select * from authen_totps where project_id = $1 and user_id = $2 and type = $3", projectId1, "u4", "t4")
 		assert.Nowish(t, row.Time("created"))
 		assert.Nil(t, row["expires"])
@@ -155,7 +155,7 @@ func Test_CreateTOTP(t *testing.T) {
 
 	// limits are per project (there's no other totp for project2)
 	{
-		res, err := db.CreateTOTP(data.CreateTOTP{
+		res, err := db.TOTPCreate(data.TOTPCreate{
 			Max:       1,
 			UserId:    "u4",
 			Type:      "",
@@ -163,7 +163,7 @@ func Test_CreateTOTP(t *testing.T) {
 			Secret:    []byte{23, 24},
 		})
 		assert.Nil(t, err)
-		assert.Equal(t, res.Status, data.CREATE_TOTP_OK)
+		assert.Equal(t, res.Status, data.TOTP_CREATE_OK)
 		row, _ := db.RowToMap("select * from authen_totps where project_id = $1 and user_id = $2", projectId2, "u4")
 		assert.Nowish(t, row.Time("created"))
 		assert.Bytes(t, row.Bytes("secret"), []byte{23, 24})
@@ -171,7 +171,7 @@ func Test_CreateTOTP(t *testing.T) {
 
 	// existing users+type don't increment count
 	for _, expires := range []*time.Time{nil, &now} {
-		res, err := db.CreateTOTP(data.CreateTOTP{
+		res, err := db.TOTPCreate(data.TOTPCreate{
 			Max:       1,
 			UserId:    "u1",
 			Type:      "t1",
@@ -181,7 +181,7 @@ func Test_CreateTOTP(t *testing.T) {
 		})
 
 		assert.Nil(t, err)
-		assert.Equal(t, res.Status, data.CREATE_TOTP_OK)
+		assert.Equal(t, res.Status, data.TOTP_CREATE_OK)
 		row, _ := db.RowToMap("select * from authen_totps where project_id = $1 and user_id = $2 and type = $3 and pending = $4", projectId1, "u1", "t1", expires != nil)
 		assert.Nowish(t, row.Time("created"))
 		assert.Bytes(t, row.Bytes("secret"), []byte{33, 34})
@@ -189,7 +189,7 @@ func Test_CreateTOTP(t *testing.T) {
 
 	// existing users DO increment count for a different type
 	for _, expires := range []*time.Time{nil, &now} {
-		res, err := db.CreateTOTP(data.CreateTOTP{
+		res, err := db.TOTPCreate(data.TOTPCreate{
 			Max:       1,
 			UserId:    "u1",
 			Type:      "t-new",
@@ -198,11 +198,11 @@ func Test_CreateTOTP(t *testing.T) {
 			Secret:    []byte{33, 34},
 		})
 		assert.Nil(t, err)
-		assert.Equal(t, res.Status, data.CREATE_TOTP_MAX)
+		assert.Equal(t, res.Status, data.TOTP_CREATE_MAX)
 	}
 }
 
-func Test_CreateTOTP_NonPending_DeletesPending(t *testing.T) {
+func Test_TOTPCreate_NonPending_DeletesPending(t *testing.T) {
 	projectId1 := uuid.String()
 
 	db.MustExec(`
@@ -210,14 +210,14 @@ func Test_CreateTOTP_NonPending_DeletesPending(t *testing.T) {
 			($1, 'u1', 't1', true, 'sec1')
 		`, projectId1)
 
-	res, err := db.CreateTOTP(data.CreateTOTP{
+	res, err := db.TOTPCreate(data.TOTPCreate{
 		Type:      "t1",
 		UserId:    "u1",
 		ProjectId: projectId1,
 		Secret:    []byte{99, 98},
 	})
 	assert.Nil(t, err)
-	assert.Equal(t, res.Status, data.CREATE_TOTP_OK)
+	assert.Equal(t, res.Status, data.TOTP_CREATE_OK)
 
 	rows, _ := db.RowsToMap("select * from authen_totps where project_id = $1", projectId1)
 	assert.Equal(t, len(rows), 1)
@@ -226,7 +226,7 @@ func Test_CreateTOTP_NonPending_DeletesPending(t *testing.T) {
 	assert.False(t, row.Bool("pending"))
 }
 
-func Test_GetTOTP(t *testing.T) {
+func Test_TOTPGet(t *testing.T) {
 	projectId1, projectId2 := uuid.String(), uuid.String()
 	db.MustExec(`
 			insert into authen_totps (project_id, user_id, type, pending, expires, secret) values
@@ -237,21 +237,21 @@ func Test_GetTOTP(t *testing.T) {
 			($2, 'u2', 't3', false, null, 'sec5')
 		`, projectId1, projectId2)
 
-	assertNotFound := func(opts data.GetTOTP) {
-		result, err := db.GetTOTP(opts)
+	assertNotFound := func(opts data.TOTPGet) {
+		result, err := db.TOTPGet(opts)
 		assert.Nil(t, err)
-		assert.Equal(t, result.Status, data.GET_TOTP_NOT_FOUND)
+		assert.Equal(t, result.Status, data.TOTP_GET_NOT_FOUND)
 	}
 
-	assertSecret := func(opts data.GetTOTP, secret string) {
-		result, err := db.GetTOTP(opts)
+	assertSecret := func(opts data.TOTPGet, secret string) {
+		result, err := db.TOTPGet(opts)
 		assert.Nil(t, err)
-		assert.Equal(t, result.Status, data.GET_TOTP_OK)
+		assert.Equal(t, result.Status, data.TOTP_GET_OK)
 		assert.Bytes(t, result.Secret, []byte(secret))
 	}
 
 	// expired
-	assertNotFound(data.GetTOTP{
+	assertNotFound(data.TOTPGet{
 		Type:      "t1",
 		UserId:    "u1",
 		ProjectId: projectId1,
@@ -259,7 +259,7 @@ func Test_GetTOTP(t *testing.T) {
 	})
 
 	// user doesn't have this type
-	assertNotFound(data.GetTOTP{
+	assertNotFound(data.TOTPGet{
 		Type:      "t9",
 		UserId:    "u1",
 		ProjectId: projectId1,
@@ -267,7 +267,7 @@ func Test_GetTOTP(t *testing.T) {
 	})
 
 	// user doesn't have this type in non-setup
-	assertNotFound(data.GetTOTP{
+	assertNotFound(data.TOTPGet{
 		Type:      "t4",
 		UserId:    "u1",
 		ProjectId: projectId1,
@@ -275,7 +275,7 @@ func Test_GetTOTP(t *testing.T) {
 	})
 
 	// wrong project
-	assertNotFound(data.GetTOTP{
+	assertNotFound(data.TOTPGet{
 		Type:      "t3",
 		UserId:    "u2",
 		ProjectId: projectId1,
@@ -283,7 +283,7 @@ func Test_GetTOTP(t *testing.T) {
 	})
 
 	// not expired
-	assertSecret(data.GetTOTP{
+	assertSecret(data.TOTPGet{
 		Type:      "t2",
 		UserId:    "u2",
 		ProjectId: projectId1,
@@ -291,7 +291,7 @@ func Test_GetTOTP(t *testing.T) {
 	}, "sec2")
 
 	// non-setup
-	assertSecret(data.GetTOTP{
+	assertSecret(data.TOTPGet{
 		Type:      "t2",
 		UserId:    "u2",
 		ProjectId: projectId1,
@@ -299,7 +299,7 @@ func Test_GetTOTP(t *testing.T) {
 	}, "sec4")
 }
 
-func Test_DeleteTOTP(t *testing.T) {
+func Test_TOTPDelete(t *testing.T) {
 	projectId1, projectId2 := uuid.String(), uuid.String()
 	projectIds := []string{projectId1, projectId2}
 	assertCount := func(expected int, args ...string) {
@@ -334,7 +334,7 @@ func Test_DeleteTOTP(t *testing.T) {
 		`, projectId1, projectId2)
 
 	// specific type
-	err := db.DeleteTOTP(data.GetTOTP{
+	err := db.TOTPDelete(data.TOTPGet{
 		Type:      "t1",
 		UserId:    "u1",
 		ProjectId: projectId1,
@@ -344,7 +344,7 @@ func Test_DeleteTOTP(t *testing.T) {
 	assertCount(0, projectId1, "u1", "t1")
 
 	// all types for the user
-	err = db.DeleteTOTP(data.GetTOTP{
+	err = db.TOTPDelete(data.TOTPGet{
 		UserId:    "u2",
 		ProjectId: projectId1,
 	})

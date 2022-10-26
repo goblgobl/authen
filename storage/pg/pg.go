@@ -102,7 +102,7 @@ func (db DB) GetUpdatedProjects(timestamp time.Time) ([]*data.Project, error) {
 	return projects, rows.Err()
 }
 
-func (db DB) CreateTOTP(opts data.CreateTOTP) (data.CreateTOTPResult, error) {
+func (db DB) TOTPCreate(opts data.TOTPCreate) (data.TOTPCreateResult, error) {
 	max := opts.Max
 	tpe := opts.Type
 	secret := opts.Secret
@@ -111,7 +111,7 @@ func (db DB) CreateTOTP(opts data.CreateTOTP) (data.CreateTOTPResult, error) {
 	pending := expires != nil
 	projectId := opts.ProjectId
 
-	var result data.CreateTOTPResult
+	var result data.TOTPCreateResult
 
 	// Since we check first, then add the user (outside of a transaction)
 	// concurrent calls to this might result in going a little over max
@@ -123,7 +123,7 @@ func (db DB) CreateTOTP(opts data.CreateTOTP) (data.CreateTOTPResult, error) {
 	}
 
 	if !canAdd {
-		result.Status = data.CREATE_TOTP_MAX
+		result.Status = data.TOTP_CREATE_MAX
 		return result, nil
 	}
 
@@ -134,7 +134,7 @@ func (db DB) CreateTOTP(opts data.CreateTOTP) (data.CreateTOTPResult, error) {
 			on conflict (project_id, user_id, type, pending) do update set secret = $5, expires = $6
 		`, projectId, userId, tpe, pending, secret, expires)
 		if err != nil {
-			return fmt.Errorf("PG.CreateTOTP (upsert) - %w", err)
+			return fmt.Errorf("PG.TOTPCreate (upsert) - %w", err)
 		}
 
 		if pending {
@@ -153,7 +153,7 @@ func (db DB) CreateTOTP(opts data.CreateTOTP) (data.CreateTOTPResult, error) {
 		`, projectId, userId, tpe)
 
 		if err != nil {
-			return fmt.Errorf("PG.CreateTOTP (delete) - %w", err)
+			return fmt.Errorf("PG.TOTPCreate (delete) - %w", err)
 		}
 
 		return nil
@@ -162,12 +162,12 @@ func (db DB) CreateTOTP(opts data.CreateTOTP) (data.CreateTOTPResult, error) {
 	return result, err
 }
 
-func (db DB) GetTOTP(opts data.GetTOTP) (data.GetTOTPResult, error) {
+func (db DB) TOTPGet(opts data.TOTPGet) (data.TOTPGetResult, error) {
 	tpe := opts.Type
 	userId := opts.UserId
 	pending := opts.Pending
 	projectId := opts.ProjectId
-	var result data.GetTOTPResult
+	var result data.TOTPGetResult
 
 	row := db.QueryRow(context.Background(), `
 		select secret
@@ -182,19 +182,19 @@ func (db DB) GetTOTP(opts data.GetTOTP) (data.GetTOTPResult, error) {
 	var secret []byte
 	if err := row.Scan(&secret); err != nil {
 		if err == pg.ErrNoRows {
-			result.Status = data.GET_TOTP_NOT_FOUND
+			result.Status = data.TOTP_GET_NOT_FOUND
 			return result, nil
 		}
-		return result, fmt.Errorf("PG.GetTOTP - %w", err)
+		return result, fmt.Errorf("PG.TOTPGet - %w", err)
 	}
 
-	return data.GetTOTPResult{
+	return data.TOTPGetResult{
 		Secret: secret,
-		Status: data.GET_TOTP_OK,
+		Status: data.TOTP_GET_OK,
 	}, nil
 }
 
-func (db DB) DeleteTOTP(opts data.GetTOTP) error {
+func (db DB) TOTPDelete(opts data.TOTPGet) error {
 	tpe := opts.Type
 	userId := opts.UserId
 	projectId := opts.ProjectId
@@ -207,7 +207,7 @@ func (db DB) DeleteTOTP(opts data.GetTOTP) error {
 	`, projectId, userId, tpe)
 
 	if err != nil {
-		return fmt.Errorf("PG.DeleteTOTP - %w", err)
+		return fmt.Errorf("PG.TOTPDelete - %w", err)
 	}
 
 	return nil

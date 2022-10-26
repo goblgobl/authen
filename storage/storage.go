@@ -27,9 +27,9 @@ type Storage interface {
 	GetProject(id string) (*data.Project, error)
 	GetUpdatedProjects(timestamp time.Time) ([]*data.Project, error)
 
-	GetTOTP(opts data.GetTOTP) (data.GetTOTPResult, error)
-	CreateTOTP(opts data.CreateTOTP) (data.CreateTOTPResult, error)
-	DeleteTOTP(opts data.GetTOTP) error
+	TOTPGet(opts data.TOTPGet) (data.TOTPGetResult, error)
+	TOTPCreate(opts data.TOTPCreate) (data.TOTPCreateResult, error)
+	TOTPDelete(opts data.TOTPGet) error
 }
 
 func Configure(config typed.Typed) (err error) {

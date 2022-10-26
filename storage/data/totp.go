@@ -2,18 +2,18 @@ package data
 
 import "time"
 
-type GetTOTPStatus int
-type CreateTOTPStatus int
+type TOTPGetStatus int
+type TOTPCreateStatus int
 
 const (
-	CREATE_TOTP_OK CreateTOTPStatus = iota
-	CREATE_TOTP_MAX
+	TOTP_CREATE_OK TOTPCreateStatus = iota
+	TOTP_CREATE_MAX
 
-	GET_TOTP_OK GetTOTPStatus = iota
-	GET_TOTP_NOT_FOUND
+	TOTP_GET_OK TOTPGetStatus = iota
+	TOTP_GET_NOT_FOUND
 )
 
-type CreateTOTP struct {
+type TOTPCreate struct {
 	Max       uint32
 	ProjectId string
 	UserId    string
@@ -22,18 +22,18 @@ type CreateTOTP struct {
 	Expires   *time.Time
 }
 
-type CreateTOTPResult struct {
-	Status CreateTOTPStatus
+type TOTPCreateResult struct {
+	Status TOTPCreateStatus
 }
 
-type GetTOTP struct {
+type TOTPGet struct {
 	ProjectId string
 	UserId    string
 	Type      string
 	Pending   bool
 }
 
-type GetTOTPResult struct {
-	Status GetTOTPStatus
+type TOTPGetResult struct {
+	Status TOTPGetStatus
 	Secret []byte
 }

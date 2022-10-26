@@ -134,7 +134,7 @@ func Test_Create_TOTP_With_Type(t *testing.T) {
 	}
 }
 
-func Test_Create_TOTP_MaxTOTPs(t *testing.T) {
+func Test_TOTP_CREATE_MAXTOTPs(t *testing.T) {
 	projectId := tests.UUID()
 	env := authen.BuildEnv().ProjectId(projectId).TOTPMax(2).Env()
 

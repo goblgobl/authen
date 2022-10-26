@@ -27,7 +27,7 @@ func Delete(conn *fasthttp.RequestCtx, env *authen.Env) (http.Response, error) {
 		return http.Validation(validator), nil
 	}
 
-	err = storage.DB.DeleteTOTP(data.GetTOTP{
+	err = storage.DB.TOTPDelete(data.TOTPGet{
 		ProjectId: env.Project.Id,
 		Type:      input.String("type"),
 		UserId:    input.String("user_id"),

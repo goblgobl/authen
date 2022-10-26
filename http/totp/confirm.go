@@ -44,7 +44,7 @@ func Confirm(conn *fasthttp.RequestCtx, env *authen.Env) (http.Response, error) 
 	tpe := input.String("type")
 	userId := input.String("user_id")
 
-	result, err := storage.DB.GetTOTP(data.GetTOTP{
+	result, err := storage.DB.TOTPGet(data.TOTPGet{
 		Type:      tpe,
 		Pending:   true,
 		UserId:    userId,
@@ -53,7 +53,7 @@ func Confirm(conn *fasthttp.RequestCtx, env *authen.Env) (http.Response, error) 
 	if err != nil {
 		return nil, err
 	}
-	if result.Status == data.GET_TOTP_NOT_FOUND {
+	if result.Status == data.TOTP_GET_NOT_FOUND {
 		return resNotFound, nil
 	}
 
@@ -69,7 +69,7 @@ func Confirm(conn *fasthttp.RequestCtx, env *authen.Env) (http.Response, error) 
 		return resIncorrectCode, nil
 	}
 
-	_, err = storage.DB.CreateTOTP(data.CreateTOTP{
+	_, err = storage.DB.TOTPCreate(data.TOTPCreate{
 		UserId:    userId,
 		Type:      tpe,
 		ProjectId: projectId,
