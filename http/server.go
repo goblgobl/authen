@@ -45,6 +45,7 @@ func handler() func(ctx *fasthttp.RequestCtx) {
 	r.POST("/v1/totp/verify", envHandler("totp_verify", totp.Verify))
 	r.POST("/v1/totp/confirm", envHandler("totp_confirm", totp.Confirm))
 	r.POST("/v1/totp/delete", envHandler("totp_delete", totp.Delete))
+	r.POST("/v1/totp/change_key", envHandler("totp_change_key", totp.ChangeKey))
 
 	r.NotFound = func(ctx *fasthttp.RequestCtx) {
 		resNotFoundPath.Write(ctx)

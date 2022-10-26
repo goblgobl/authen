@@ -78,7 +78,7 @@ func Test_Verify_Fails_ForPending(t *testing.T) {
 			"key":     hexKey,
 			"code":    "123456",
 		}).
-		Post(Confirm).
+		Post(Verify).
 		ExpectInvalid(102_006)
 }
 
