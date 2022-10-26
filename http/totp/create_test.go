@@ -26,27 +26,28 @@ func Test_Create_InvalidData(t *testing.T) {
 	request.ReqT(t, authen.BuildEnv().Env()).
 		Body("{}").
 		Post(Create).
-		ExpectValidation("id", 1001, "key", 1001, "account", 1001).
+		ExpectValidation("user_id", 1001, "key", 1001, "account", 1001).
 		ExpectNoValidation("issuer")
 
 	request.ReqT(t, authen.BuildEnv().Env()).
 		Body(map[string]any{
-			"id":      "",
+			"user_id": "",
 			"key":     "",
 			"account": "",
 		}).
 		Post(Create).
-		ExpectValidation("id", 1003, "key", 1003, "account", 1003)
+		ExpectValidation("user_id", 1003, "key", 1003, "account", 1003)
 
 	request.ReqT(t, authen.BuildEnv().Env()).
 		Body(map[string]any{
-			"id":      strings.Repeat("a", 101),
+			"type":    strings.Repeat("a", 101),
+			"user_id": strings.Repeat("a", 101),
 			"key":     strings.Repeat("b", 33),
 			"account": strings.Repeat("c", 101),
 			"issuer":  strings.Repeat("d", 101),
 		}).
 		Post(Create).
-		ExpectValidation("id", 1003, "key", 1003, "account", 1003, "issuer", 1003)
+		ExpectValidation("type", 1003, "user_id", 1003, "key", 1003, "account", 1003, "issuer", 1003)
 
 	// key has to be 32 exactly, so let's test under this also
 	// (previous test was 33)
@@ -69,7 +70,7 @@ func Test_Create_TOTP_Without_Type(t *testing.T) {
 		res := request.ReqT(t, env).
 			Body(map[string]any{
 				"key":     hexKey,
-				"id":      userId,
+				"user_id": userId,
 				"issuer":  "test-issuer",
 				"account": "test-account",
 			}).
@@ -118,7 +119,7 @@ func Test_Create_TOTP_With_Type(t *testing.T) {
 		res := request.ReqT(t, env).
 			Body(map[string]any{
 				"key":     tests.HexKey(),
-				"id":      userId,
+				"user_id": userId,
 				"type":    "t1",
 				"issuer":  "test-issuer",
 				"account": "test-account",
@@ -145,7 +146,7 @@ func Test_Create_TOTP_MaxTOTPs(t *testing.T) {
 			"issuer":  "test-issuer",
 			"account": "test-account",
 			"key":     tests.HexKey(),
-			"id":      tests.String(1, 100),
+			"user_id": tests.String(1, 100),
 		}).
 		Post(Create).ExpectInvalid(102_005)
 }

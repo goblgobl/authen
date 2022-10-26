@@ -65,6 +65,7 @@ type TestableDB interface {
 	Placeholder(i int) string
 	IsNotFound(err error) bool
 	RowToMap(sql string, args ...any) (typed.Typed, error)
+	RowsToMap(sql string, args ...any) ([]typed.Typed, error)
 }
 
 var PlaceholderPattern = regexp.MustCompile(`\$(\d+)`)
@@ -83,4 +84,17 @@ func Row(sql string, args ...any) typed.Typed {
 		panic(err)
 	}
 	return row
+}
+
+func Rows(sql string, args ...any) []typed.Typed {
+	db := storage.DB.(TestableDB)
+	// no one's going to like this, but not sure how else to deal with it
+	if db.Placeholder(0) == "?1" {
+		sql = PlaceholderPattern.ReplaceAllString(sql, "?$1")
+	}
+	rows, err := db.RowsToMap(sql, args...)
+	if err != nil {
+		panic(err)
+	}
+	return rows
 }

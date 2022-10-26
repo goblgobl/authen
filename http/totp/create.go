@@ -20,9 +20,9 @@ import (
 
 var (
 	createValidation = validation.Input().
-				Field(idValidation).
 				Field(keyValidation).
 				Field(typeValidation).
+				Field(userIdValidation).
 				Field(validation.String("account").Required().Length(1, 100)).
 				Field(validation.String("issuer").Length(1, 100))
 
@@ -64,8 +64,8 @@ func Create(conn *fasthttp.RequestCtx, env *authen.Env) (http.Response, error) {
 	expires := time.Now().Add(project.TOTPSetupTTL)
 	result, err := storage.DB.CreateTOTP(data.CreateTOTP{
 		Secret:    encrypted,
-		UserId:    input.String("id"),
 		Type:      input.String("type"),
+		UserId:    input.String("user_id"),
 		Expires:   &expires,
 		ProjectId: project.Id,
 		Max:       project.TOTPMax,

@@ -17,10 +17,10 @@ import (
 
 var (
 	verifyValidation = validation.Input().
-		Field(idValidation).
 		Field(keyValidation).
 		Field(typeValidation).
-		Field(codeValidation)
+		Field(codeValidation).
+		Field(userIdValidation)
 )
 
 func Verify(conn *fasthttp.RequestCtx, env *authen.Env) (http.Response, error) {
@@ -34,12 +34,11 @@ func Verify(conn *fasthttp.RequestCtx, env *authen.Env) (http.Response, error) {
 		return http.Validation(validator), nil
 	}
 
-	project := env.Project
 	result, err := storage.DB.GetTOTP(data.GetTOTP{
 		Type:      input.String("type"),
-		UserId:    input.String("id"),
+		UserId:    input.String("user_id"),
 		Pending:   false,
-		ProjectId: project.Id,
+		ProjectId: env.Project.Id,
 	})
 	if err != nil {
 		return nil, err

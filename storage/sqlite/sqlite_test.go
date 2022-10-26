@@ -7,6 +7,7 @@ import (
 
 	"src.goblgobl.com/authen/storage/data"
 	"src.goblgobl.com/tests/assert"
+	"src.goblgobl.com/utils/sqlite"
 	"src.goblgobl.com/utils/typed"
 	"src.goblgobl.com/utils/uuid"
 )
@@ -282,6 +283,60 @@ func Test_GetTOTP(t *testing.T) {
 			ProjectId: "p1",
 			Pending:   false,
 		}, "sec4")
+	})
+}
+
+func Test_DeleteTOTP(t *testing.T) {
+	withTestDB(func(conn Conn) {
+		assertCount := func(expected int, args ...string) {
+			actual := 0
+			var err error
+
+			switch len(args) {
+			case 0:
+				// count of all, to make sure we didn't over-delete
+				actual, err = sqlite.Scalar[int](conn.Conn, "select count(*) from authen_totps")
+			case 2:
+				// count of all fo user
+				actual, err = sqlite.Scalar[int](conn.Conn, "select count(*) from authen_totps where project_id = ?1 and user_id = ?2", args[0], args[1])
+			case 3:
+				// count for user+type
+				actual, err = sqlite.Scalar[int](conn.Conn, "select count(*) from authen_totps where project_id = ?1 and user_id = ?2 and type = ?3", args[0], args[1], args[2])
+			}
+			if err != nil {
+				panic(err)
+			}
+			assert.Equal(t, actual, expected)
+		}
+
+		conn.MustExec(`
+			insert into authen_totps (project_id, user_id, type, pending, expires, secret) values
+			('p1', 'u1', 't1', 1, unixepoch() - 1, 'sec1'),
+			('p1', 'u2', 't2', 1, unixepoch() + 5, 'sec2'),
+			('p1', 'u2', 't4', 0, unixepoch() + 5, 'sec3'),
+			('p1', 'u2', 't2', 0, null, 'sec4'),
+			('p2', 'u2', 't3', 1, null, 'sec5'),
+			('p1', 'u3', 't1', 1, null, 'sec5')
+		`)
+
+		// specific type
+		err := conn.DeleteTOTP(data.GetTOTP{
+			Type:      "t1",
+			UserId:    "u1",
+			ProjectId: "p1",
+		})
+		assert.Nil(t, err)
+		assertCount(5)
+		assertCount(0, "p1", "u1", "t1")
+
+		// all types for the user
+		err = conn.DeleteTOTP(data.GetTOTP{
+			UserId:    "u2",
+			ProjectId: "p1",
+		})
+		assert.Nil(t, err)
+		assertCount(2)
+		assertCount(0, "p1", "u2")
 	})
 }
 

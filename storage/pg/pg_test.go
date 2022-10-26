@@ -8,6 +8,7 @@ import (
 	"src.goblgobl.com/authen/storage/data"
 	"src.goblgobl.com/tests"
 	"src.goblgobl.com/tests/assert"
+	"src.goblgobl.com/utils/pg"
 	"src.goblgobl.com/utils/typed"
 	"src.goblgobl.com/utils/uuid"
 )
@@ -296,4 +297,58 @@ func Test_GetTOTP(t *testing.T) {
 		ProjectId: projectId1,
 		Pending:   false,
 	}, "sec4")
+}
+
+func Test_DeleteTOTP(t *testing.T) {
+	projectId1, projectId2 := uuid.String(), uuid.String()
+	projectIds := []string{projectId1, projectId2}
+	assertCount := func(expected int, args ...string) {
+		actual := 0
+		var err error
+
+		switch len(args) {
+		case 0:
+			// count of all, to make sure we didn't over-delete
+			actual, err = pg.Scalar[int](db.DB, "select count(*) from authen_totps where project_id = any($1)", projectIds)
+		case 2:
+			// count of all fo user
+			actual, err = pg.Scalar[int](db.DB, "select count(*) from authen_totps where project_id = $1 and user_id = $2", args[0], args[1])
+		case 3:
+			// count for user+type
+			actual, err = pg.Scalar[int](db.DB, "select count(*) from authen_totps where project_id = $1 and user_id = $2 and type = $3", args[0], args[1], args[2])
+		}
+		if err != nil {
+			panic(err)
+		}
+		assert.Equal(t, actual, expected)
+	}
+
+	db.MustExec(`
+			insert into authen_totps (project_id, user_id, type, pending, expires, secret) values
+			($1, 'u1', 't1', true, now(), 'sec1'),
+			($1, 'u2', 't2', true, now(), 'sec2'),
+			($1, 'u2', 't4', false, now(), 'sec3'),
+			($1, 'u2', 't2', false, null, 'sec4'),
+			($2, 'u2', 't3', true, null, 'sec5'),
+			($1, 'u3', 't1', true, null, 'sec5')
+		`, projectId1, projectId2)
+
+	// specific type
+	err := db.DeleteTOTP(data.GetTOTP{
+		Type:      "t1",
+		UserId:    "u1",
+		ProjectId: projectId1,
+	})
+	assert.Nil(t, err)
+	assertCount(5)
+	assertCount(0, projectId1, "u1", "t1")
+
+	// all types for the user
+	err = db.DeleteTOTP(data.GetTOTP{
+		UserId:    "u2",
+		ProjectId: projectId1,
+	})
+	assert.Nil(t, err)
+	assertCount(2)
+	assertCount(0, projectId1, "u2")
 }

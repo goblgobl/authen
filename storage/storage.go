@@ -29,6 +29,7 @@ type Storage interface {
 
 	GetTOTP(opts data.GetTOTP) (data.GetTOTPResult, error)
 	CreateTOTP(opts data.CreateTOTP) (data.CreateTOTPResult, error)
+	DeleteTOTP(opts data.GetTOTP) error
 }
 
 func Configure(config typed.Typed) (err error) {

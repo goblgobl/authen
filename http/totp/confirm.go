@@ -18,10 +18,10 @@ import (
 
 var (
 	confirmValidation = validation.Input().
-				Field(idValidation).
 				Field(keyValidation).
 				Field(typeValidation).
-				Field(codeValidation)
+				Field(codeValidation).
+				Field(userIdValidation)
 
 	resNotFound      = http.StaticError(400, codes.RES_TOTP_NOT_FOUND, "TOTP not found")
 	resIncorrectKey  = http.StaticError(400, codes.RES_TOTP_INCORRECT_KEY, "key is not correct")
@@ -40,10 +40,9 @@ func Confirm(conn *fasthttp.RequestCtx, env *authen.Env) (http.Response, error) 
 		return http.Validation(validator), nil
 	}
 
-	project := env.Project
-	projectId := project.Id
+	projectId := env.Project.Id
 	tpe := input.String("type")
-	userId := input.String("id")
+	userId := input.String("user_id")
 
 	result, err := storage.DB.GetTOTP(data.GetTOTP{
 		Type:      tpe,

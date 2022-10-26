@@ -9,9 +9,9 @@ import (
 )
 
 var (
-	idValidation   = validation.String("id").Required().Length(1, 100)
-	codeValidation = validation.String("code").Required().Length(6, 6)
-	typeValidation = validation.String("type").Length(1, 100)
+	typeValidation   = validation.String("type").Length(1, 100)
+	codeValidation   = validation.String("code").Required().Length(6, 6)
+	userIdValidation = validation.String("user_id").Required().Length(1, 100)
 
 	// 32 bits hex encoded
 	keyValidation = validation.String("key").Required().Length(64, 64).

@@ -194,6 +194,25 @@ func (db DB) GetTOTP(opts data.GetTOTP) (data.GetTOTPResult, error) {
 	}, nil
 }
 
+func (db DB) DeleteTOTP(opts data.GetTOTP) error {
+	tpe := opts.Type
+	userId := opts.UserId
+	projectId := opts.ProjectId
+
+	_, err := db.Exec(context.Background(), `
+		delete from authen_totps
+		where project_id = $1
+			and user_id = $2
+			and (type = $3 or $3 = '')
+	`, projectId, userId, tpe)
+
+	if err != nil {
+		return fmt.Errorf("PG.DeleteTOTP - %w", err)
+	}
+
+	return nil
+}
+
 func (db DB) canAddTOTP(projectId string, userId string, tpe string, max uint32) (bool, error) {
 	// no limit
 	if max == 0 {

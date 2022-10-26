@@ -187,6 +187,25 @@ func (c Conn) GetTOTP(opts data.GetTOTP) (data.GetTOTPResult, error) {
 	}, nil
 }
 
+func (c Conn) DeleteTOTP(opts data.GetTOTP) error {
+	tpe := opts.Type
+	userId := opts.UserId
+	projectId := opts.ProjectId
+
+	err := c.Exec(`
+		delete from authen_totps
+		where project_id = ?1
+			and user_id = ?2
+			and (type = ?3 or ?3 = '')
+	`, projectId, userId, tpe)
+
+	if err != nil {
+		return fmt.Errorf("Sqlite.DeleteTOTP - %w", err)
+	}
+
+	return nil
+}
+
 func (c Conn) canAddTOTP(projectId string, userId string, tpe string, max uint32) (bool, error) {
 	// no limit
 	if max == 0 {
