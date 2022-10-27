@@ -22,27 +22,27 @@ func init() {
 	projectId = tests.Factory.Project.Insert().String("id")
 }
 
-func Test_EnvHandler_Missing_Project_Header(t *testing.T) {
+func Test_Server_Handler_Missing_Project_Header(t *testing.T) {
 	conn := request.Req(t).Conn()
-	envHandler("", func(conn *fasthttp.RequestCtx, env *authen.Env) (http.Response, error) {
+	http.Handler("", loadEnv, func(conn *fasthttp.RequestCtx, env *authen.Env) (http.Response, error) {
 		assert.Fail(t, "next should not be called")
 		return nil, nil
 	})(conn)
 	request.Res(t, conn).ExpectInvalid(102002)
 }
 
-func Test_EnvHandler_Unknown_Project(t *testing.T) {
+func Test_Server_Handler_Unknown_Project(t *testing.T) {
 	conn := request.Req(t).ProjectId("6429C13A-DBB2-4FF2-ADDA-571C601B91E6").Conn()
-	envHandler("", func(conn *fasthttp.RequestCtx, env *authen.Env) (http.Response, error) {
+	http.Handler("", loadEnv, func(conn *fasthttp.RequestCtx, env *authen.Env) (http.Response, error) {
 		assert.Fail(t, "next should not be called")
 		return nil, nil
 	})(conn)
 	request.Res(t, conn).ExpectInvalid(102003)
 }
 
-func Test_EnvHandler_CallsHandlerWithProject(t *testing.T) {
+func Test_Server_Handler_CallsHandlerWithProject(t *testing.T) {
 	conn := request.Req(t).ProjectId(projectId).Conn()
-	envHandler("", func(conn *fasthttp.RequestCtx, env *authen.Env) (http.Response, error) {
+	http.Handler("", loadEnv, func(conn *fasthttp.RequestCtx, env *authen.Env) (http.Response, error) {
 		assert.Equal(t, env.Project.Id, projectId)
 		return http.Ok(map[string]int{"over": 9000}), nil
 	})(conn)
@@ -51,17 +51,17 @@ func Test_EnvHandler_CallsHandlerWithProject(t *testing.T) {
 	assert.Equal(t, res.Json.Int("over"), 9000)
 }
 
-func Test_EnvHandler_RequestId(t *testing.T) {
+func Test_Server_Handler_RequestId(t *testing.T) {
 	conn := request.Req(t).ProjectId(projectId).Conn()
 
 	var id1, id2 string
-	envHandler("", func(conn *fasthttp.RequestCtx, env *authen.Env) (http.Response, error) {
-		id1 = env.RequestId
+	http.Handler("", loadEnv, func(conn *fasthttp.RequestCtx, env *authen.Env) (http.Response, error) {
+		id1 = env.RequestId()
 		return http.Ok(nil), nil
 	})(conn)
 
-	envHandler("", func(conn *fasthttp.RequestCtx, env *authen.Env) (http.Response, error) {
-		id2 = env.RequestId
+	http.Handler("", loadEnv, func(conn *fasthttp.RequestCtx, env *authen.Env) (http.Response, error) {
+		id2 = env.RequestId()
 		return http.Ok(nil), nil
 	})(conn)
 
@@ -70,7 +70,7 @@ func Test_EnvHandler_RequestId(t *testing.T) {
 	assert.NotEqual(t, id1, id2)
 }
 
-func Test_EnvHandler_LogsResponse(t *testing.T) {
+func Test_Server_Handler_LogsResponse(t *testing.T) {
 	out := &strings.Builder{}
 	var logger log.Logger
 	defer func() {
@@ -79,10 +79,10 @@ func Test_EnvHandler_LogsResponse(t *testing.T) {
 
 	var requestId string
 	conn := request.Req(t).ProjectId(projectId).Conn()
-	envHandler("test-route", func(conn *fasthttp.RequestCtx, env *authen.Env) (http.Response, error) {
+	http.Handler("test-route", loadEnv, func(conn *fasthttp.RequestCtx, env *authen.Env) (http.Response, error) {
 		logger = env.Logger
 		forceLoggerOut(logger, out)
-		requestId = env.RequestId
+		requestId = env.RequestId()
 		return http.StaticNotFound(9001), nil
 	})(conn)
 
@@ -97,7 +97,7 @@ func Test_EnvHandler_LogsResponse(t *testing.T) {
 	assert.Equal(t, reqLog["c"], "req")
 }
 
-func Test_EnvHandler_LogsError(t *testing.T) {
+func Test_Server_Handler_LogsError(t *testing.T) {
 	out := &strings.Builder{}
 	var logger log.Logger
 	defer func() {
@@ -106,10 +106,10 @@ func Test_EnvHandler_LogsError(t *testing.T) {
 
 	var requestId string
 	conn := request.Req(t).ProjectId(projectId).Conn()
-	envHandler("test2", func(conn *fasthttp.RequestCtx, env *authen.Env) (http.Response, error) {
+	http.Handler("test2", loadEnv, func(conn *fasthttp.RequestCtx, env *authen.Env) (http.Response, error) {
 		logger = env.Logger
 		forceLoggerOut(logger, out)
-		requestId = env.RequestId
+		requestId = env.RequestId()
 		return nil, errors.New("Not Over 9000!")
 	})(conn)
 

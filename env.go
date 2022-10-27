@@ -15,7 +15,7 @@ type Env struct {
 	// a per-project incrementing integer. It can wrap and we can have duplicates
 	// but generally, over a reasonable window, it should be unique per project.
 	// Mostly just used with the logger, but exposed in case we need it.
-	RequestId string
+	requestId string
 
 	// Reference to the project
 	Project *Project
@@ -38,9 +38,13 @@ func NewEnv(p *Project) *Env {
 	return &Env{
 		Project:   p,
 		Logger:    logger,
-		RequestId: requestId,
+		requestId: requestId,
 		Validator: validation.Checkout(),
 	}
+}
+
+func (e *Env) RequestId() string {
+	return e.requestId
 }
 
 func (e *Env) Info(ctx string) log.Logger {
