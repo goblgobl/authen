@@ -2,6 +2,7 @@ package pg
 
 import (
 	"fmt"
+	"os"
 	"testing"
 	"time"
 
@@ -15,7 +16,22 @@ import (
 
 var db DB
 
+func shouldRunTests() bool {
+	tpe := tests.StorageType()
+	return tpe == "cr" || tpe == "pg"
+}
+
+func TestMain(m *testing.M) {
+	if !shouldRunTests() {
+		os.Exit(0)
+	}
+	os.Exit(m.Run())
+}
+
 func init() {
+	if !shouldRunTests() {
+		return
+	}
 	url := tests.PG()
 	tpe := tests.StorageType()
 

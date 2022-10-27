@@ -23,6 +23,9 @@ func Test_Configure_Sqlite(t *testing.T) {
 }
 
 func Test_Configure_PG(t *testing.T) {
+	if tests.StorageType() != "pg" {
+		return
+	}
 	err := Configure(typed.Typed{"type": "pg", "url": tests.PG()})
 	assert.Nil(t, err)
 	_, ok := DB.(pg.DB)
