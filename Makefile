@@ -16,7 +16,7 @@ t_pg:
 	@printf "\nrunning tests against postgres\n"
 	@psql $${GOBL_TEST_PG:-postgres://localhost:5432/postgres} --quiet -c "drop database gobl_test" || true
 	@psql $${GOBL_TEST_PG:-postgres://localhost:5432/postgres} --quiet -c "create database gobl_test"
-	@GOBL_TEST_STORAGE=pg go test -count=1 ./... -run "${F}" \
+	@GOBL_TEST_STORAGE=postgres go test -count=1 ./... -run "${F}" \
 		| grep -v "no tests to run" \
 		| grep -v "no test files"
 
@@ -25,7 +25,7 @@ t_cr:
 	@printf "\nrunning tests against cockroachdb\n"
 	@psql $${GOBL_TEST_PG:-postgres://root@localhost:26257/} --quiet -c "drop database gobl_test" || true
 	@psql $${GOBL_TEST_PG:-postgres://root@localhost:26257/} --quiet -c "create database gobl_test"
-	@GOBL_TEST_STORAGE=cr go test -count=1 ./... -run "${F}" \
+	@GOBL_TEST_STORAGE=cockroach go test -count=1 ./... -run "${F}" \
 		| grep -v "no tests to run" \
 		| grep -v "no test files"
 

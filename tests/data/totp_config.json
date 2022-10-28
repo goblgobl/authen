@@ -1,0 +1,4 @@
+{
+	"storage": {"type": "sqlite"},
+	"totp": {"issuer": "gobl.test"}
+}

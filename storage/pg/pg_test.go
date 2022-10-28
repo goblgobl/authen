@@ -18,7 +18,7 @@ var db DB
 
 func shouldRunTests() bool {
 	tpe := tests.StorageType()
-	return tpe == "cr" || tpe == "pg"
+	return tpe == "cockroach" || tpe == "postgres"
 }
 
 func TestMain(m *testing.M) {
@@ -35,7 +35,7 @@ func init() {
 	url := tests.PG()
 	tpe := tests.StorageType()
 
-	if tpe == "cr" {
+	if tpe == "cockroach" {
 		url = tests.CR()
 	}
 

@@ -13,6 +13,7 @@ import (
 
 type Config struct {
 	InstanceId             uint8             `json:"instance_id"`
+	MultiTenancy           bool              `json:"multi_tenancy"`
 	HTTP                   HTTP              `json:"http"`
 	TOTP                   *TOTP             `json:"totp"`
 	Log                    log.Config        `json:"log"`
@@ -53,6 +54,24 @@ func Configure(filePath string) (Config, error) {
 
 	if err := storage.Configure(config.Storage); err != nil {
 		return config, err
+	}
+
+	totp := config.TOTP
+	if !config.MultiTenancy && (totp == nil || totp.Issuer == "") {
+		return config, log.Errf(codes.ERR_MULTITENANCY_TOTP_CONFIG, "totp.issuer must be set")
+	}
+
+	if config.MultiTenancy && totp != nil {
+		log.Warn("multi_tenancy_totp").String("details", "'totp' configuration settings are ignored when multi_tenancy=true").Log()
+	}
+
+	if totp != nil {
+		if totp.SetupTTL == 0 {
+			totp.SetupTTL = 300
+		}
+		if totp.SecretLength == 0 {
+			totp.SecretLength = 16
+		}
 	}
 
 	return config, nil

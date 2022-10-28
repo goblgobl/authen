@@ -3,7 +3,7 @@
 		"level": "warn"
 	},
 	"storage": {
-		"type": "pg",
+		"type": "postgres",
 		"url": "postgres://localhost:5432/gobl_test"
 	}
 }

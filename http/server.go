@@ -47,8 +47,8 @@ func handler() func(ctx *fasthttp.RequestCtx) {
 	r.GET("/v1/info", misc.Info)
 
 	envLoader := loadMultiTenancyEnv
-	if totp := authen.Config.TOTP; totp != nil {
-		envLoader = createSingleTenancyLoader(totp)
+	if !authen.Config.MultiTenancy {
+		envLoader = createSingleTenancyLoader(authen.Config.TOTP)
 	}
 
 	r.POST("/v1/totp", http.Handler("totp_create", envLoader, totp.Create))

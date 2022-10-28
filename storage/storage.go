@@ -35,7 +35,7 @@ type Storage interface {
 func Configure(config typed.Typed) (err error) {
 	tpe := strings.ToLower(config.String("type"))
 	switch tpe {
-	case "pg", "cr":
+	case "postgres", "cockroach":
 		DB, err = pg.New(config, tpe)
 	case "sqlite":
 		DB, err = sqlite.New(config)
