@@ -70,7 +70,7 @@ func Test_ChangeKey_Fails_ForPending(t *testing.T) {
 	userId := tests.String(1, 100)
 
 	key, hexKey := tests.Key()
-	secret := gotp.RandomSecret(int(16))
+	secret := gotp.RandomSecret(16)
 
 	tests.Factory.TOTP.Insert("project_id", env.Project.Id, "user_id", userId, "secret", secret, "key", key, "pending", true)
 	request.ReqT(t, env).
@@ -104,7 +104,7 @@ func Test_ChangeKey(t *testing.T) {
 		key, hexKey := tests.Key()
 		userId := tests.String(1, 100)
 		newKey, newHexKey := tests.Key()
-		secret := gotp.RandomSecret(int(16))
+		secret := gotp.RandomSecret(16)
 
 		tests.Factory.TOTP.Insert("project_id", env.Project.Id, "user_id", userId, "type", tpe, "secret", secret, "key", key)
 		request.ReqT(t, env).

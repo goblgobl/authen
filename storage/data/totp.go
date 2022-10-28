@@ -14,7 +14,7 @@ const (
 )
 
 type TOTPCreate struct {
-	Max       uint32
+	Max       int
 	ProjectId string
 	UserId    string
 	Type      string

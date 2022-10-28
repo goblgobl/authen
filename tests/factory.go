@@ -26,12 +26,13 @@ func init() {
 	f.DB = storage.DB.(f.SQLStorage)
 	Factory.Project = f.NewTable("authen_projects", func(args f.KV) f.KV {
 		return f.KV{
-			"id":             args.UUID("id", uuid.String()),
-			"issuer":         args.String("issuer", ""),
-			"totp_max":       args.Int("totp_max", 100),
-			"totp_setup_ttl": args.Int("totp_setup_ttl", 120),
-			"created":        args.Time("created", time.Now()),
-			"updated":        args.Time("updated", time.Now()),
+			"id":                 args.UUID("id", uuid.String()),
+			"totp_max":           args.Int("totp_max", 100),
+			"totp_issuer":        args.String("totp_issuer", ""),
+			"totp_setup_ttl":     args.Int("totp_setup_ttl", 120),
+			"totp_secret_length": args.Int("totp_secret_length", 32),
+			"created":            args.Time("created", time.Now()),
+			"updated":            args.Time("updated", time.Now()),
 		}
 	})
 

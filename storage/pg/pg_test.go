@@ -62,19 +62,27 @@ func Test_GetProject_Unknown(t *testing.T) {
 func Test_GetProject_Success(t *testing.T) {
 	id := uuid.String()
 	db.MustExec("truncate table authen_projects")
-	db.MustExec("insert into authen_projects (id, issuer, totp_max, totp_setup_ttl) values ($1, 'goblgobl.com', 84, 124)", id)
+	db.MustExec(`
+		insert into authen_projects (id, totp_issuer, totp_max, totp_setup_ttl, totp_secret_length)
+		values ($1, 'goblgobl.com', 84, 124, 38)
+	`, id)
+
 	p, err := db.GetProject(id)
 	assert.Nil(t, err)
 	assert.Equal(t, p.Id, id)
 	assert.Equal(t, p.TOTPMax, 84)
 	assert.Equal(t, p.TOTPSetupTTL, 124)
-	assert.Equal(t, p.Issuer, "goblgobl.com")
+	assert.Equal(t, p.TOTPSecretLength, 38)
+	assert.Equal(t, p.TOTPIssuer, "goblgobl.com")
 }
 
 func Test_GetUpdatedProjects_None(t *testing.T) {
 	id := uuid.String()
 	db.MustExec("truncate table authen_projects")
-	db.MustExec("insert into authen_projects (id, issuer, totp_max, totp_setup_ttl, updated) values ($1, '', 11, 12, now() - interval '1 second')", id)
+	db.MustExec(`
+		insert into authen_projects (id, totp_issuer, totp_max, totp_setup_ttl, totp_secret_length, updated)
+		values ($1, '', 11, 12, 13, now() - interval '1 second')
+	`, id)
 	updated, err := db.GetUpdatedProjects(time.Now())
 	assert.Nil(t, err)
 	assert.Equal(t, len(updated), 0)
@@ -84,11 +92,11 @@ func Test_GetUpdatedProjects_Success(t *testing.T) {
 	id1, id2, id3, id4 := uuid.String(), uuid.String(), uuid.String(), uuid.String()
 	db.MustExec("truncate table authen_projects")
 	db.MustExec(`
-			insert into authen_projects (id, issuer, totp_max, totp_setup_ttl, updated) values
-			($1, '', 1, 11, now() - interval '500 second'),
-			($2, '', 2, 12, now() - interval '200 second'),
-			($3, '', 3, 13, now() - interval '100 second'),
-			($4, '', 4, 14, now() - interval '10 second')
+			insert into authen_projects (id, totp_issuer, totp_max, totp_setup_ttl, totp_secret_length, updated) values
+			($1, '', 1, 11, 21, now() - interval '500 second'),
+			($2, '', 2, 12, 22, now() - interval '200 second'),
+			($3, '', 3, 13, 23, now() - interval '100 second'),
+			($4, '', 4, 14, 24, now() - interval '10 second')
 		`, id1, id2, id3, id4)
 	updated, err := db.GetUpdatedProjects(time.Now().Add(time.Second * -105))
 	assert.Nil(t, err)

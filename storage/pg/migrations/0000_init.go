@@ -22,9 +22,10 @@ func createProjects(tx pgx.Tx) error {
 	if _, err := tx.Exec(bg, `
 		create table authen_projects (
 			id uuid not null primary key,
-			issuer text not null,
 			totp_max int not null,
+			totp_issuer text not null,
 			totp_setup_ttl int not null,
+			totp_secret_length int not null,
 			created timestamptz not null default now(),
 			updated timestamptz not null default now()
 		)`); err != nil {

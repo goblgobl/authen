@@ -28,19 +28,26 @@ func Test_GetProject_Unknown(t *testing.T) {
 
 func Test_GetProject_Success(t *testing.T) {
 	withTestDB(func(conn Conn) {
-		conn.MustExec("insert into authen_projects (id, issuer, totp_max, totp_setup_ttl) values ('p1', 'is1', 93, 121)")
+		conn.MustExec(`
+			insert into authen_projects (id, totp_issuer, totp_max, totp_setup_ttl, totp_secret_length)
+			values ('p1', 'is1', 93, 121, 39)
+		`)
 		p, err := conn.GetProject("p1")
 		assert.Nil(t, err)
 		assert.Equal(t, p.Id, "p1")
-		assert.Equal(t, p.Issuer, "is1")
 		assert.Equal(t, p.TOTPMax, 93)
+		assert.Equal(t, p.TOTPIssuer, "is1")
+		assert.Equal(t, p.TOTPSecretLength, 39)
 		assert.Equal(t, p.TOTPSetupTTL, 121)
 	})
 }
 
 func Test_GetUpdatedProjects_None(t *testing.T) {
 	withTestDB(func(conn Conn) {
-		conn.MustExec("insert into authen_projects (id, issuer, totp_max, totp_setup_ttl, updated) values ('p1', '2is', 93, 122, 0)")
+		conn.MustExec(`
+			insert into authen_projects (id, totp_issuer, totp_max, totp_setup_ttl, totp_secret_length, updated)
+			values ('p1', '2is', 93, 122, 10, 0)
+		`)
 		updated, err := conn.GetUpdatedProjects(time.Now())
 		assert.Nil(t, err)
 		assert.Equal(t, len(updated), 0)
@@ -50,11 +57,11 @@ func Test_GetUpdatedProjects_None(t *testing.T) {
 func Test_GetUpdatedProjects_Success(t *testing.T) {
 	withTestDB(func(conn Conn) {
 		conn.MustExec(`
-			insert into authen_projects (id, issuer, totp_max, totp_setup_ttl, updated) values
-			('p1', '', 1, 11, unixepoch() - 500),
-			('p2', '', 2, 12, unixepoch() - 200),
-			('p3', '', 3, 13, unixepoch() - 100),
-			('p4', '', 4, 14, unixepoch() - 10)
+			insert into authen_projects (id, totp_issuer, totp_max, totp_setup_ttl, totp_secret_length, updated) values
+			('p1', '', 1, 11, 21, unixepoch() - 500),
+			('p2', '', 2, 12, 22, unixepoch() - 200),
+			('p3', '', 3, 13, 23, unixepoch() - 100),
+			('p4', '', 4, 14, 24, unixepoch() - 10)
 		`)
 		updated, err := conn.GetUpdatedProjects(time.Now().Add(time.Second * -105))
 		assert.Nil(t, err)

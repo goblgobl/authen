@@ -23,5 +23,5 @@ func main() {
 		log.Fatal("authen_init").Err(err).Log()
 		return
 	}
-	http.Listen(config.HTTP)
+	http.Listen()
 }

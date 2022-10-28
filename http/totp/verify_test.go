@@ -69,7 +69,7 @@ func Test_Verify_Fails_ForPending(t *testing.T) {
 	userId := tests.String(1, 100)
 
 	key, hexKey := tests.Key()
-	secret := gotp.RandomSecret(int(16))
+	secret := gotp.RandomSecret(16)
 
 	tests.Factory.TOTP.Insert("project_id", env.Project.Id, "user_id", userId, "secret", secret, "key", key, "pending", true)
 	request.ReqT(t, env).
@@ -101,7 +101,7 @@ func Test_Verify_WrongCode(t *testing.T) {
 	userId := tests.String(1, 100)
 
 	key, hexKey := tests.Key()
-	secret := gotp.RandomSecret(int(16))
+	secret := gotp.RandomSecret(16)
 
 	tests.Factory.TOTP.Insert("project_id", env.Project.Id, "user_id", userId, "secret", secret, "key", key)
 	request.ReqT(t, env).
@@ -119,7 +119,7 @@ func Test_Verify_Without_Type(t *testing.T) {
 	userId := tests.String(1, 100)
 
 	key, hexKey := tests.Key()
-	secret := gotp.RandomSecret(int(16))
+	secret := gotp.RandomSecret(16)
 	totp := gotp.NewDefaultTOTP(secret)
 
 	tests.Factory.TOTP.Insert("project_id", env.Project.Id, "user_id", userId, "secret", secret, "key", key)
@@ -148,7 +148,7 @@ func Test_Verify_With_Type(t *testing.T) {
 	userId := tests.String(1, 100)
 
 	key, hexKey := tests.Key()
-	secret := gotp.RandomSecret(int(16))
+	secret := gotp.RandomSecret(16)
 	totp := gotp.NewDefaultTOTP(secret)
 
 	tests.Factory.TOTP.Insert("project_id", env.Project.Id, "user_id", userId, "secret", secret, "key", key, "type", "t2")

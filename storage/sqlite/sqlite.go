@@ -51,7 +51,7 @@ func (c Conn) Info() (any, error) {
 }
 
 func (c Conn) GetProject(id string) (*data.Project, error) {
-	row := c.Row("select id, issuer, totp_max, totp_setup_ttl from authen_projects where id = ?1", id)
+	row := c.Row("select id, totp_issuer, totp_max, totp_setup_ttl, totp_secret_length from authen_projects where id = ?1", id)
 
 	project, err := scanProject(row)
 	if err != nil {
@@ -76,7 +76,7 @@ func (c Conn) GetUpdatedProjects(timestamp time.Time) ([]*data.Project, error) {
 		return nil, nil
 	}
 
-	rows := c.Rows("select id, issuer, totp_max, totp_setup_ttl from authen_projects where updated > ?1", timestamp)
+	rows := c.Rows("select id, totp_issuer, totp_max, totp_setup_ttl, totp_secret_length from authen_projects where updated > ?1", timestamp)
 	defer rows.Close()
 
 	projects := make([]*data.Project, 0, count)
@@ -206,7 +206,7 @@ func (c Conn) TOTPDelete(opts data.TOTPGet) error {
 	return nil
 }
 
-func (c Conn) totpCanAdd(projectId string, userId string, tpe string, max uint32) (bool, error) {
+func (c Conn) totpCanAdd(projectId string, userId string, tpe string, max int) (bool, error) {
 	// no limit
 	if max == 0 {
 		return true, nil
@@ -239,21 +239,22 @@ func (c Conn) totpCanAdd(projectId string, userId string, tpe string, max uint32
 	if err != nil {
 		return false, fmt.Errorf("Sqlite.totpCanAdd (count) - %w", err)
 	}
-	return count < int(max), nil
+	return count < max, nil
 }
 
 func scanProject(scanner sqlite.Scanner) (*data.Project, error) {
-	var id, issuer string
-	var totpMax, totpSetupTTL int
+	var id, totpIssuer string
+	var totpMax, totpSetupTTL, totpSecretLength int
 
-	if err := scanner.Scan(&id, &issuer, &totpMax, &totpSetupTTL); err != nil {
+	if err := scanner.Scan(&id, &totpIssuer, &totpMax, &totpSetupTTL, &totpSecretLength); err != nil {
 		return nil, err
 	}
 
 	return &data.Project{
-		Id:           id,
-		Issuer:       issuer,
-		TOTPMax:      uint32(totpMax),
-		TOTPSetupTTL: uint32(totpSetupTTL),
+		Id:               id,
+		TOTPMax:          totpMax,
+		TOTPIssuer:       totpIssuer,
+		TOTPSetupTTL:     totpSetupTTL,
+		TOTPSecretLength: totpSecretLength,
 	}, nil
 }

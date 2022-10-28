@@ -7,16 +7,10 @@ package authen
 import (
 	"time"
 
-	"src.goblgobl.com/authen/config"
 	"src.goblgobl.com/utils/log"
 	"src.goblgobl.com/utils/uuid"
 	"src.goblgobl.com/utils/validation"
 )
-
-func init() {
-	// awful
-	Config.TOTP = config.TOTP{SecretLength: 16}
-}
 
 type EnvBuilder struct {
 	project   *Project
@@ -25,7 +19,7 @@ type EnvBuilder struct {
 }
 
 func BuildEnv() *EnvBuilder {
-	project := &Project{Id: uuid.String()}
+	project := &Project{Id: uuid.String(), TOTPSecretLength: 16}
 	return &EnvBuilder{
 		project: project,
 	}
@@ -36,12 +30,12 @@ func (eb *EnvBuilder) ProjectId(id string) *EnvBuilder {
 	return eb
 }
 
-func (eb *EnvBuilder) TOTPMax(max uint32) *EnvBuilder {
+func (eb *EnvBuilder) TOTPMax(max int) *EnvBuilder {
 	eb.project.TOTPMax = max
 	return eb
 }
 
-func (eb *EnvBuilder) TOTPSetupTTL(max uint32) *EnvBuilder {
+func (eb *EnvBuilder) TOTPSetupTTL(max int) *EnvBuilder {
 	eb.project.TOTPSetupTTL = time.Duration(max) * time.Second
 	return eb
 }

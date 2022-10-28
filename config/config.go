@@ -14,7 +14,7 @@ import (
 type Config struct {
 	InstanceId             uint8             `json:"instance_id"`
 	HTTP                   HTTP              `json:"http"`
-	TOTP                   TOTP              `json:"totp"`
+	TOTP                   *TOTP             `json:"totp"`
 	Log                    log.Config        `json:"log"`
 	Storage                typed.Typed       `json:"storage"`
 	Validation             validation.Config `json:"validation"`
@@ -26,7 +26,10 @@ type HTTP struct {
 }
 
 type TOTP struct {
-	SecretLength uint8 `json:"secret_length"`
+	Max          int    `json:"max"`
+	Issuer       string `json:"issuer"`
+	SetupTTL     int    `json:"setup_ttl"`
+	SecretLength int    `json:"secret_length"`
 }
 
 func Configure(filePath string) (Config, error) {
@@ -50,11 +53,6 @@ func Configure(filePath string) (Config, error) {
 
 	if err := storage.Configure(config.Storage); err != nil {
 		return config, err
-	}
-
-	totp := config.TOTP
-	if totp.SecretLength == 0 {
-		config.TOTP.SecretLength = 16
 	}
 
 	return config, nil

@@ -17,13 +17,6 @@ func Test_Config_InvalidJson(t *testing.T) {
 	assert.Equal(t, err.Error(), "code: 103002 - expected colon after object key")
 }
 
-func Test_Config_Defaults(t *testing.T) {
-	config, err := Configure(testConfigPath("minimal_config.json"))
-	assert.Nil(t, err)
-
-	assert.Equal(t, config.TOTP.SecretLength, 16)
-}
-
 func testConfigPath(file string) string {
 	return path.Join("../tests/data/", file)
 }

@@ -6,9 +6,11 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/valyala/fasthttp"
 	"src.goblgobl.com/authen"
+	"src.goblgobl.com/authen/config"
 	"src.goblgobl.com/authen/tests"
 	"src.goblgobl.com/tests/assert"
 	"src.goblgobl.com/tests/request"
@@ -22,27 +24,27 @@ func init() {
 	projectId = tests.Factory.Project.Insert().String("id")
 }
 
-func Test_Server_Handler_Missing_Project_Header(t *testing.T) {
+func Test_Server_MultiTenancy_Missing_Project_Header(t *testing.T) {
 	conn := request.Req(t).Conn()
-	http.Handler("", loadEnv, func(conn *fasthttp.RequestCtx, env *authen.Env) (http.Response, error) {
+	http.Handler("", loadMultiTenancyEnv, func(conn *fasthttp.RequestCtx, env *authen.Env) (http.Response, error) {
 		assert.Fail(t, "next should not be called")
 		return nil, nil
 	})(conn)
 	request.Res(t, conn).ExpectInvalid(102002)
 }
 
-func Test_Server_Handler_Unknown_Project(t *testing.T) {
+func Test_Server_MultiTenancy_Unknown_Project(t *testing.T) {
 	conn := request.Req(t).ProjectId("6429C13A-DBB2-4FF2-ADDA-571C601B91E6").Conn()
-	http.Handler("", loadEnv, func(conn *fasthttp.RequestCtx, env *authen.Env) (http.Response, error) {
+	http.Handler("", loadMultiTenancyEnv, func(conn *fasthttp.RequestCtx, env *authen.Env) (http.Response, error) {
 		assert.Fail(t, "next should not be called")
 		return nil, nil
 	})(conn)
 	request.Res(t, conn).ExpectInvalid(102003)
 }
 
-func Test_Server_Handler_CallsHandlerWithProject(t *testing.T) {
+func Test_Server_MultiTenancy_CallsHandlerWithProject(t *testing.T) {
 	conn := request.Req(t).ProjectId(projectId).Conn()
-	http.Handler("", loadEnv, func(conn *fasthttp.RequestCtx, env *authen.Env) (http.Response, error) {
+	http.Handler("", loadMultiTenancyEnv, func(conn *fasthttp.RequestCtx, env *authen.Env) (http.Response, error) {
 		assert.Equal(t, env.Project.Id, projectId)
 		return http.Ok(map[string]int{"over": 9000}), nil
 	})(conn)
@@ -51,16 +53,16 @@ func Test_Server_Handler_CallsHandlerWithProject(t *testing.T) {
 	assert.Equal(t, res.Json.Int("over"), 9000)
 }
 
-func Test_Server_Handler_RequestId(t *testing.T) {
+func Test_Server_MultiTenancy_RequestId(t *testing.T) {
 	conn := request.Req(t).ProjectId(projectId).Conn()
 
 	var id1, id2 string
-	http.Handler("", loadEnv, func(conn *fasthttp.RequestCtx, env *authen.Env) (http.Response, error) {
+	http.Handler("", loadMultiTenancyEnv, func(conn *fasthttp.RequestCtx, env *authen.Env) (http.Response, error) {
 		id1 = env.RequestId()
 		return http.Ok(nil), nil
 	})(conn)
 
-	http.Handler("", loadEnv, func(conn *fasthttp.RequestCtx, env *authen.Env) (http.Response, error) {
+	http.Handler("", loadMultiTenancyEnv, func(conn *fasthttp.RequestCtx, env *authen.Env) (http.Response, error) {
 		id2 = env.RequestId()
 		return http.Ok(nil), nil
 	})(conn)
@@ -70,7 +72,7 @@ func Test_Server_Handler_RequestId(t *testing.T) {
 	assert.NotEqual(t, id1, id2)
 }
 
-func Test_Server_Handler_LogsResponse(t *testing.T) {
+func Test_Server_MultiTenancy_LogsResponse(t *testing.T) {
 	out := &strings.Builder{}
 	var logger log.Logger
 	defer func() {
@@ -79,7 +81,7 @@ func Test_Server_Handler_LogsResponse(t *testing.T) {
 
 	var requestId string
 	conn := request.Req(t).ProjectId(projectId).Conn()
-	http.Handler("test-route", loadEnv, func(conn *fasthttp.RequestCtx, env *authen.Env) (http.Response, error) {
+	http.Handler("test-route", loadMultiTenancyEnv, func(conn *fasthttp.RequestCtx, env *authen.Env) (http.Response, error) {
 		logger = env.Logger
 		forceLoggerOut(logger, out)
 		requestId = env.RequestId()
@@ -97,7 +99,7 @@ func Test_Server_Handler_LogsResponse(t *testing.T) {
 	assert.Equal(t, reqLog["c"], "req")
 }
 
-func Test_Server_Handler_LogsError(t *testing.T) {
+func Test_Server_MultiTenancy_LogsError(t *testing.T) {
 	out := &strings.Builder{}
 	var logger log.Logger
 	defer func() {
@@ -106,7 +108,7 @@ func Test_Server_Handler_LogsError(t *testing.T) {
 
 	var requestId string
 	conn := request.Req(t).ProjectId(projectId).Conn()
-	http.Handler("test2", loadEnv, func(conn *fasthttp.RequestCtx, env *authen.Env) (http.Response, error) {
+	http.Handler("test2", loadMultiTenancyEnv, func(conn *fasthttp.RequestCtx, env *authen.Env) (http.Response, error) {
 		logger = env.Logger
 		forceLoggerOut(logger, out)
 		requestId = env.RequestId()
@@ -126,6 +128,31 @@ func Test_Server_Handler_LogsError(t *testing.T) {
 	assert.Equal(t, reqLog["c"], "env_handler_err")
 	assert.Equal(t, reqLog["eid"], res.Headers["Error-Id"])
 	assert.Equal(t, reqLog["err"], `"Not Over 9000!"`)
+}
+
+func Test_Server_SingleTenancy_CallsHandlerWithProject(t *testing.T) {
+
+	loader := createSingleTenancyLoader(&config.TOTP{
+		Max:          1,
+		Issuer:       "test-issuer",
+		SetupTTL:     22,
+		SecretLength: 8,
+	})
+
+	conn := request.Req(t).Conn()
+	http.Handler("", loader, func(conn *fasthttp.RequestCtx, env *authen.Env) (http.Response, error) {
+		p := env.Project
+		assert.Equal(t, p.Id, "00000000-00000000-00000000-00000000")
+		assert.Equal(t, p.TOTPMax, 1)
+		assert.Equal(t, p.TOTPIssuer, "test-issuer")
+		assert.Equal(t, p.TOTPSecretLength, 8)
+		assert.Equal(t, p.TOTPSetupTTL, time.Duration(22)*time.Second)
+
+		return http.Ok(map[string]int{"over": 9001}), nil
+	})(conn)
+
+	res := request.Res(t, conn).OK()
+	assert.Equal(t, res.Json.Int("over"), 9001)
 }
 
 func forceLoggerOut(logger log.Logger, out io.Writer) {

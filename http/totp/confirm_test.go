@@ -72,7 +72,7 @@ func Test_Confirm_Expired(t *testing.T) {
 	env := authen.BuildEnv().Env()
 	userId := tests.String(1, 100)
 	key, hexKey := tests.Key()
-	secret := gotp.RandomSecret(int(16))
+	secret := gotp.RandomSecret(16)
 	totp := gotp.NewDefaultTOTP(secret)
 
 	tests.Factory.TOTP.Insert("project_id", env.Project.Id, "user_id", userId, "secret", secret, "key", key, "pending", true, "expires", time.Now().Add(-time.Second))
@@ -104,7 +104,7 @@ func Test_Confirm_WrongCode(t *testing.T) {
 	userId := tests.String(1, 100)
 
 	key, hexKey := tests.Key()
-	secret := gotp.RandomSecret(int(16))
+	secret := gotp.RandomSecret(16)
 
 	tests.Factory.TOTP.Insert("project_id", env.Project.Id, "user_id", userId, "secret", secret, "key", key, "pending", true, "expires", time.Now().Add(time.Minute))
 	request.ReqT(t, env).
@@ -125,7 +125,7 @@ func Test_Confirm_Without_Type(t *testing.T) {
 
 	key, hexKey := tests.Key()
 	for i := 0; i < 2; i++ {
-		secret := gotp.RandomSecret(int(16))
+		secret := gotp.RandomSecret(16)
 		totp := gotp.NewDefaultTOTP(secret)
 
 		tests.Factory.TOTP.Insert("project_id", env.Project.Id, "user_id", userId, "secret", secret, "key", key, "pending", true, "expires", time.Now().Add(time.Minute))
@@ -161,7 +161,7 @@ func Test_Confirm_With_Type(t *testing.T) {
 
 	key, hexKey := tests.Key()
 	for i := 0; i < 2; i++ {
-		secret := gotp.RandomSecret(int(16))
+		secret := gotp.RandomSecret(16)
 		totp := gotp.NewDefaultTOTP(secret)
 
 		tests.Factory.TOTP.Insert("project_id", env.Project.Id, "user_id", userId, "secret", secret, "type", "t1x", "key", key, "pending", true, "expires", time.Now().Add(time.Minute))

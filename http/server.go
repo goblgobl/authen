@@ -6,6 +6,7 @@ import (
 	"src.goblgobl.com/authen/config"
 	"src.goblgobl.com/authen/http/misc"
 	"src.goblgobl.com/authen/http/totp"
+	"src.goblgobl.com/authen/storage/data"
 	"src.goblgobl.com/utils"
 	"src.goblgobl.com/utils/http"
 
@@ -16,13 +17,12 @@ import (
 
 var (
 	resNotFoundPath         = http.StaticNotFound(codes.RES_UNKNOWN_ROUTE)
-	resEnvTimeout           = http.StaticUnavailableError(codes.RES_ENV_TIMEOUT)
 	resMissingProjectHeader = http.StaticError(400, codes.RES_MISSING_PROJECT_HEADER, "Gobl-Project header required")
 	resProjectNotFound      = http.StaticError(400, codes.RES_PROJECT_NOT_FOUND, "unknown project id")
 )
 
-func Listen(config config.HTTP) {
-	listen := config.Listen
+func Listen() {
+	listen := authen.Config.HTTP.Listen
 	if listen == "" {
 		listen = "127.0.0.1:5200"
 	}
@@ -46,11 +46,16 @@ func handler() func(ctx *fasthttp.RequestCtx) {
 	r.GET("/v1/ping", misc.Ping)
 	r.GET("/v1/info", misc.Info)
 
-	r.POST("/v1/totp", http.Handler("totp_create", loadEnv, totp.Create))
-	r.POST("/v1/totp/verify", http.Handler("totp_verify", loadEnv, totp.Verify))
-	r.POST("/v1/totp/confirm", http.Handler("totp_confirm", loadEnv, totp.Confirm))
-	r.POST("/v1/totp/delete", http.Handler("totp_delete", loadEnv, totp.Delete))
-	r.POST("/v1/totp/change_key", http.Handler("totp_change_key", loadEnv, totp.ChangeKey))
+	envLoader := loadMultiTenancyEnv
+	if totp := authen.Config.TOTP; totp != nil {
+		envLoader = createSingleTenancyLoader(totp)
+	}
+
+	r.POST("/v1/totp", http.Handler("totp_create", envLoader, totp.Create))
+	r.POST("/v1/totp/verify", http.Handler("totp_verify", envLoader, totp.Verify))
+	r.POST("/v1/totp/confirm", http.Handler("totp_confirm", envLoader, totp.Confirm))
+	r.POST("/v1/totp/delete", http.Handler("totp_delete", envLoader, totp.Delete))
+	r.POST("/v1/totp/change_key", http.Handler("totp_change_key", envLoader, totp.ChangeKey))
 
 	r.NotFound = func(ctx *fasthttp.RequestCtx) {
 		resNotFoundPath.Write(ctx)
@@ -59,7 +64,7 @@ func handler() func(ctx *fasthttp.RequestCtx) {
 	return r.Handler
 }
 
-func loadEnv(conn *fasthttp.RequestCtx) (*authen.Env, bool) {
+func loadMultiTenancyEnv(conn *fasthttp.RequestCtx) (*authen.Env, bool) {
 	projectId := conn.Request.Header.PeekBytes([]byte("Gobl-Project"))
 	if projectId == nil {
 		resMissingProjectHeader.Write(conn)
@@ -81,13 +86,19 @@ func loadEnv(conn *fasthttp.RequestCtx) (*authen.Env, bool) {
 		resProjectNotFound.Write(conn)
 		return nil, false
 	}
-	env := authen.NewEnv(project)
-	if env == nil {
-		// only way we can't get an env is if the project's env pool
-		// blocked for too long
-		resEnvTimeout.Write(conn)
-		return nil, false
-	}
+	return authen.NewEnv(project), true
+}
 
-	return env, true
+func createSingleTenancyLoader(config *config.TOTP) func(conn *fasthttp.RequestCtx) (*authen.Env, bool) {
+	project := authen.NewProject(&data.Project{
+		Id:               "00000000-00000000-00000000-00000000",
+		TOTPMax:          config.Max,
+		TOTPIssuer:       config.Issuer,
+		TOTPSetupTTL:     config.SetupTTL,
+		TOTPSecretLength: config.SecretLength,
+	})
+
+	return func(conn *fasthttp.RequestCtx) (*authen.Env, bool) {
+		return authen.NewEnv(project), true
+	}
 }

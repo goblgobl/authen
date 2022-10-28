@@ -56,7 +56,7 @@ func (db DB) Info() (any, error) {
 
 func (db DB) GetProject(id string) (*data.Project, error) {
 	row := db.QueryRow(context.Background(), `
-		select id, issuer, totp_max, totp_setup_ttl
+		select id, totp_issuer, totp_max, totp_setup_ttl, totp_secret_length
 		from authen_projects
 		where id = $1
 	`, id)
@@ -84,7 +84,7 @@ func (db DB) GetUpdatedProjects(timestamp time.Time) ([]*data.Project, error) {
 		return nil, fmt.Errorf("PG.GetUpdatedProjects (count) - %w", err)
 	}
 
-	rows, err := db.Query(context.Background(), "select id, issuer, totp_max, totp_setup_ttl from authen_projects where updated > $1", timestamp)
+	rows, err := db.Query(context.Background(), "select id, totp_issuer, totp_max, totp_setup_ttl, totp_secret_length from authen_projects where updated > $1", timestamp)
 	if err != nil {
 		return nil, fmt.Errorf("PG.GetUpdatedProjects (select) - %w", err)
 	}
@@ -213,7 +213,7 @@ func (db DB) TOTPDelete(opts data.TOTPGet) error {
 	return nil
 }
 
-func (db DB) canAddTOTP(projectId string, userId string, tpe string, max uint32) (bool, error) {
+func (db DB) canAddTOTP(projectId string, userId string, tpe string, max int) (bool, error) {
 	// no limit
 	if max == 0 {
 		return true, nil
@@ -235,7 +235,7 @@ func (db DB) canAddTOTP(projectId string, userId string, tpe string, max uint32)
 		return exists, nil
 	}
 
-	count, err := pg.Scalar[uint32](db.DB, `
+	count, err := pg.Scalar[int](db.DB, `
 		select count(*)
 		from authen_totps
 		where project_id = $1
@@ -248,16 +248,17 @@ func (db DB) canAddTOTP(projectId string, userId string, tpe string, max uint32)
 }
 
 func scanProject(row pg.Row) (*data.Project, error) {
-	var id, issuer string
-	var totpMax, totpSetupTTL int
-	if err := row.Scan(&id, &issuer, &totpMax, &totpSetupTTL); err != nil {
+	var id, totpIssuer string
+	var totpMax, totpSetupTTL, totpSecretLength int
+	if err := row.Scan(&id, &totpIssuer, &totpMax, &totpSetupTTL, &totpSecretLength); err != nil {
 		return nil, fmt.Errorf("PG.scanProject - %w", err)
 	}
 
 	return &data.Project{
-		Id:           id,
-		Issuer:       issuer,
-		TOTPMax:      uint32(totpMax),
-		TOTPSetupTTL: uint32(totpSetupTTL),
+		Id:               id,
+		TOTPMax:          totpMax,
+		TOTPIssuer:       totpIssuer,
+		TOTPSetupTTL:     totpSetupTTL,
+		TOTPSecretLength: totpSecretLength,
 	}, nil
 }

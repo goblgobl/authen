@@ -42,11 +42,13 @@ func Create(conn *fasthttp.RequestCtx, env *authen.Env) (http.Response, error) {
 
 	issuer := input.String("issuer")
 	if issuer == "" {
-		issuer = env.Project.Issuer
+		issuer = env.Project.TOTPIssuer
 	}
 	account := input.String("account")
 
-	secret := gotp.RandomSecret(int(authen.Config.TOTP.SecretLength))
+	project := env.Project
+
+	secret := gotp.RandomSecret(project.TOTPSecretLength)
 	url := gotp.NewDefaultTOTP(secret).ProvisioningUri(account, issuer)
 
 	png, err := qrcode.Encode(url, qrcode.Medium, 256)
@@ -60,7 +62,6 @@ func Create(conn *fasthttp.RequestCtx, env *authen.Env) (http.Response, error) {
 		return nil, err
 	}
 
-	project := env.Project
 	expires := time.Now().Add(project.TOTPSetupTTL)
 	result, err := storage.DB.TOTPCreate(data.TOTPCreate{
 		Secret:    encrypted,

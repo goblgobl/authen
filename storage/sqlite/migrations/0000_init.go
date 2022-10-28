@@ -21,9 +21,10 @@ func createProjects(conn sqlite.Conn) error {
 	err := conn.Exec(`
 		create table authen_projects (
 			id text not null primary key,
-			issuer text not null,
 			totp_max int not null,
+			totp_issuer text not null,
 			totp_setup_ttl int not null,
+			totp_secret_length int not null,
 			created int not null default(unixepoch()),
 			updated int not null default(unixepoch())
 	)`)
