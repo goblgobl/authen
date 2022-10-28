@@ -9,7 +9,6 @@ import (
 	"src.goblgobl.com/authen/storage/pg"
 	"src.goblgobl.com/authen/storage/sqlite"
 	"src.goblgobl.com/utils/log"
-	"src.goblgobl.com/utils/typed"
 )
 
 // singleton
@@ -32,15 +31,16 @@ type Storage interface {
 	TOTPDelete(opts data.TOTPGet) error
 }
 
-func Configure(config typed.Typed) (err error) {
-	tpe := strings.ToLower(config.String("type"))
-	switch tpe {
-	case "postgres", "cockroach":
-		DB, err = pg.New(config, tpe)
+func Configure(config Config) (err error) {
+	switch strings.ToLower(config.Type) {
+	case "postgres":
+		DB, err = pg.New(config.Postgres, "postgres")
+	case "cockroach":
+		DB, err = pg.New(config.Cockroach, "cockroach")
 	case "sqlite":
-		DB, err = sqlite.New(config)
+		DB, err = sqlite.New(config.Sqlite)
 	default:
-		err = log.Errf(codes.ERR_INVALID_STORAGE_TYPE, "storage.type is invalid. Should be one of: pg, cr or sqlite")
+		err = log.Errf(codes.ERR_INVALID_STORAGE_TYPE, "storage.type is invalid. Should be one of: postgres, cockroach or sqlite")
 	}
 	return
 }

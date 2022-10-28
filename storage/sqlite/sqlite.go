@@ -7,16 +7,18 @@ import (
 	"src.goblgobl.com/authen/storage/data"
 	"src.goblgobl.com/authen/storage/sqlite/migrations"
 	"src.goblgobl.com/utils/sqlite"
-	"src.goblgobl.com/utils/typed"
 )
+
+type Config struct {
+	Path string `json:"path"`
+}
 
 type Conn struct {
 	sqlite.Conn
 }
 
-func New(config typed.Typed) (Conn, error) {
-	filePath := config.String("path")
-	conn, err := sqlite.New(filePath, true)
+func New(config Config) (Conn, error) {
+	conn, err := sqlite.New(config.Path, true)
 	if err != nil {
 		return Conn{}, fmt.Errorf("Sqlite.New - %w", err)
 	}

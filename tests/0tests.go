@@ -13,6 +13,8 @@ import (
 	"time"
 
 	"src.goblgobl.com/authen/storage"
+	"src.goblgobl.com/authen/storage/pg"
+	"src.goblgobl.com/authen/storage/sqlite"
 	"src.goblgobl.com/tests"
 	"src.goblgobl.com/utils/typed"
 	"src.goblgobl.com/utils/validation"
@@ -31,7 +33,14 @@ func init() {
 		panic(err)
 	}
 
-	if err := storage.Configure(tests.StorageConfig()); err != nil {
+	storageConfig := storage.Config{
+		Type:      tests.StorageType(),
+		Sqlite:    sqlite.Config{Path: ":memory:"},
+		Postgres:  pg.Config{URL: tests.PG()},
+		Cockroach: pg.Config{URL: tests.CR()},
+	}
+
+	if err := storage.Configure(storageConfig); err != nil {
 		panic(err)
 	}
 

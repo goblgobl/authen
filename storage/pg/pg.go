@@ -8,19 +8,22 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"src.goblgobl.com/utils/pg"
-	"src.goblgobl.com/utils/typed"
 
 	"src.goblgobl.com/authen/storage/data"
 	"src.goblgobl.com/authen/storage/pg/migrations"
 )
+
+type Config struct {
+	URL string `json:"url"`
+}
 
 type DB struct {
 	pg.DB
 	tpe string
 }
 
-func New(config typed.Typed, tpe string) (DB, error) {
-	db, err := pg.New(config.String("url"))
+func New(config Config, tpe string) (DB, error) {
+	db, err := pg.New(config.URL)
 	if err != nil {
 		return DB{}, fmt.Errorf("PG.New - %w", err)
 	}

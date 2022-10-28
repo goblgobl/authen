@@ -7,7 +7,6 @@ import (
 	"src.goblgobl.com/authen/storage"
 	"src.goblgobl.com/utils/json"
 	"src.goblgobl.com/utils/log"
-	"src.goblgobl.com/utils/typed"
 	"src.goblgobl.com/utils/validation"
 )
 
@@ -17,7 +16,7 @@ type Config struct {
 	HTTP                   HTTP              `json:"http"`
 	TOTP                   *TOTP             `json:"totp"`
 	Log                    log.Config        `json:"log"`
-	Storage                typed.Typed       `json:"storage"`
+	Storage                storage.Config    `json:"storage"`
 	Validation             validation.Config `json:"validation"`
 	ProjectUpdateFrequency uint16            `json:"project_update_frequency"`
 }

@@ -10,7 +10,6 @@ import (
 	"src.goblgobl.com/tests"
 	"src.goblgobl.com/tests/assert"
 	"src.goblgobl.com/utils/pg"
-	"src.goblgobl.com/utils/typed"
 	"src.goblgobl.com/utils/uuid"
 )
 
@@ -32,15 +31,15 @@ func init() {
 	if !shouldRunTests() {
 		return
 	}
+
 	url := tests.PG()
 	tpe := tests.StorageType()
-
 	if tpe == "cockroach" {
 		url = tests.CR()
 	}
 
 	var err error
-	db, err = New(typed.Typed{"url": url}, tpe)
+	db, err = New(Config{URL: url}, tpe)
 	if err != nil {
 		panic(err)
 	}

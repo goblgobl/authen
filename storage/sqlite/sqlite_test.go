@@ -8,7 +8,6 @@ import (
 	"src.goblgobl.com/authen/storage/data"
 	"src.goblgobl.com/tests/assert"
 	"src.goblgobl.com/utils/sqlite"
-	"src.goblgobl.com/utils/typed"
 	"src.goblgobl.com/utils/uuid"
 )
 
@@ -348,7 +347,7 @@ func Test_TOTPDelete(t *testing.T) {
 }
 
 func withTestDB(fn func(conn Conn)) {
-	conn, err := New(typed.Typed{"path": ":memory:"})
+	conn, err := New(Config{Path: ":memory:"})
 	if err != nil {
 		panic(err)
 	}
