@@ -15,7 +15,7 @@ func Test_Delete_InvalidBody(t *testing.T) {
 	request.ReqT(t, authen.BuildEnv().Env()).
 		Body("nope").
 		Post(Delete).
-		ExpectInvalid(2004)
+		ExpectInvalid(2003)
 }
 
 func Test_Delete_InvalidData(t *testing.T) {

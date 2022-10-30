@@ -1,9 +1,14 @@
 {
 	"log": {
-		"level": "warn"
+		"level": "info"
+	},
+	"totp": {
+		"issuer": "gobl.local"
 	},
 	"storage": {
 		"type": "postgres",
-		"url": "postgres://localhost:5432/gobl_test"
+		"postgres": {
+			"url": "postgres://localhost:5432/gobl_test"
+		}
 	}
 }

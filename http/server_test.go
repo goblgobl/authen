@@ -2,9 +2,6 @@ package http
 
 import (
 	"errors"
-	"io"
-	"os"
-	"strings"
 	"testing"
 	"time"
 
@@ -73,22 +70,17 @@ func Test_Server_MultiTenancy_RequestId(t *testing.T) {
 }
 
 func Test_Server_MultiTenancy_LogsResponse(t *testing.T) {
-	out := &strings.Builder{}
-	var logger log.Logger
-	defer func() {
-		forceLoggerOut(logger, os.Stderr)
-	}()
-
 	var requestId string
 	conn := request.Req(t).ProjectId(projectId).Conn()
-	http.Handler("test-route", loadMultiTenancyEnv, func(conn *fasthttp.RequestCtx, env *authen.Env) (http.Response, error) {
-		logger = env.Logger
-		forceLoggerOut(logger, out)
-		requestId = env.RequestId()
-		return http.StaticNotFound(9001), nil
-	})(conn)
 
-	reqLog := log.KvParse(out.String())
+	logged := tests.CaptureLog(func() {
+		http.Handler("test-route", loadMultiTenancyEnv, func(conn *fasthttp.RequestCtx, env *authen.Env) (http.Response, error) {
+			requestId = env.RequestId()
+			return http.StaticNotFound(9001), nil
+		})(conn)
+	})
+
+	reqLog := log.KvParse(logged)
 	assert.Equal(t, reqLog["pid"], projectId)
 	assert.Equal(t, reqLog["rid"], requestId)
 	assert.Equal(t, reqLog["l"], "info")
@@ -100,38 +92,37 @@ func Test_Server_MultiTenancy_LogsResponse(t *testing.T) {
 }
 
 func Test_Server_MultiTenancy_LogsError(t *testing.T) {
-	out := &strings.Builder{}
-	var logger log.Logger
-	defer func() {
-		forceLoggerOut(logger, os.Stderr)
-	}()
-
 	var requestId string
 	conn := request.Req(t).ProjectId(projectId).Conn()
-	http.Handler("test2", loadMultiTenancyEnv, func(conn *fasthttp.RequestCtx, env *authen.Env) (http.Response, error) {
-		logger = env.Logger
-		forceLoggerOut(logger, out)
-		requestId = env.RequestId()
-		return nil, errors.New("Not Over 9000!")
-	})(conn)
+	logged := tests.CaptureLog(func() {
+		http.Handler("test2", loadMultiTenancyEnv, func(conn *fasthttp.RequestCtx, env *authen.Env) (http.Response, error) {
+			requestId = env.RequestId()
+			return nil, errors.New("Not Over 9000!")
+		})(conn)
+	})
 
 	res := request.Res(t, conn).ExpectCode(2001)
 	assert.Equal(t, res.Status, 500)
-	reqLog := log.KvParse(out.String())
+
+	errorId := res.Headers["Error-Id"]
+
+	assert.Equal(t, len(errorId), 36)
+	assert.Equal(t, res.Json.String("error_id"), errorId)
+
+	reqLog := log.KvParse(logged)
 	assert.Equal(t, reqLog["pid"], projectId)
 	assert.Equal(t, reqLog["rid"], requestId)
 	assert.Equal(t, reqLog["l"], "error")
 	assert.Equal(t, reqLog["status"], "500")
 	assert.Equal(t, reqLog["route"], "test2")
-	assert.Equal(t, reqLog["res"], "45")
+	assert.Equal(t, reqLog["res"], "95")
 	assert.Equal(t, reqLog["code"], "2001")
-	assert.Equal(t, reqLog["c"], "env_handler_err")
-	assert.Equal(t, reqLog["eid"], res.Headers["Error-Id"])
+	assert.Equal(t, reqLog["c"], "handler")
+	assert.Equal(t, reqLog["eid"], errorId)
 	assert.Equal(t, reqLog["err"], `"Not Over 9000!"`)
 }
 
 func Test_Server_SingleTenancy_CallsHandlerWithProject(t *testing.T) {
-
 	loader := createSingleTenancyLoader(&config.TOTP{
 		Max:          1,
 		Issuer:       "test-issuer",
@@ -153,8 +144,4 @@ func Test_Server_SingleTenancy_CallsHandlerWithProject(t *testing.T) {
 
 	res := request.Res(t, conn).OK()
 	assert.Equal(t, res.Json.Int("over"), 9001)
-}
-
-func forceLoggerOut(logger log.Logger, out io.Writer) {
-	logger.(*log.KvLogger).SetOut(out)
 }

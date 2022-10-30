@@ -17,7 +17,7 @@ func Test_Confirm_InvalidBody(t *testing.T) {
 	request.ReqT(t, authen.BuildEnv().Env()).
 		Body("nope").
 		Post(Confirm).
-		ExpectInvalid(2004)
+		ExpectInvalid(2003)
 }
 
 func Test_Confirm_InvalidData(t *testing.T) {

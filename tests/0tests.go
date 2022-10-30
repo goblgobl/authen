@@ -53,6 +53,10 @@ func String(constraints ...int) string {
 	return generator.String(constraints...)
 }
 
+func CaptureLog(fn func()) string {
+	return tests.CaptureLog(fn)
+}
+
 func UUID() string {
 	return generator.UUID()
 }

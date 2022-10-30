@@ -12,7 +12,7 @@ func Ping(conn *fasthttp.RequestCtx) {
 
 	if err := storage.DB.Ping(); err != nil {
 		log.Error("ping_store").Err(err).Log()
-		http.GenericServerError.Write(conn)
+		http.ServerError().Write(conn)
 	} else {
 		conn.SetStatusCode(200)
 		conn.Response.SetBody([]byte(`{"ok":true}`))

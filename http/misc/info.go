@@ -21,8 +21,8 @@ func Info(conn *fasthttp.RequestCtx) {
 	storageInfo, err := storage.DB.Info()
 
 	if err != nil {
-		log.Error("storage_info	").Err(err).Log()
-		http.GenericServerError.Write(conn)
+		log.Error("storage_info").Err(err).Log()
+		http.ServerError().Write(conn)
 		return
 	}
 
@@ -38,7 +38,7 @@ func Info(conn *fasthttp.RequestCtx) {
 
 	if err != nil {
 		log.Error("info_serialize").Err(err).Log()
-		http.GenericServerError.Write(conn)
+		http.ServerError().Write(conn)
 	} else {
 		conn.SetStatusCode(200)
 		conn.Response.SetBody(data)

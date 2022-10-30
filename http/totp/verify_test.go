@@ -14,7 +14,7 @@ func Test_Verify_InvalidBody(t *testing.T) {
 	request.ReqT(t, authen.BuildEnv().Env()).
 		Body("nope").
 		Post(Verify).
-		ExpectInvalid(2004)
+		ExpectInvalid(2003)
 }
 
 func Test_Verify_InvalidData(t *testing.T) {

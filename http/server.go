@@ -64,32 +64,25 @@ func handler() func(ctx *fasthttp.RequestCtx) {
 	return r.Handler
 }
 
-func loadMultiTenancyEnv(conn *fasthttp.RequestCtx) (*authen.Env, bool) {
+func loadMultiTenancyEnv(conn *fasthttp.RequestCtx) (*authen.Env, http.Response, error) {
 	projectId := conn.Request.Header.PeekBytes([]byte("Gobl-Project"))
 	if projectId == nil {
-		resMissingProjectHeader.Write(conn)
-		return nil, false
+		return nil, resMissingProjectHeader, nil
 	}
 	projectIdString := utils.B2S(projectId)
 	project, err := authen.Projects.Get(projectIdString)
 
 	if err != nil {
-		log.Error("env_handler_projects_get").
-			String("pid", projectIdString).
-			Err(err).
-			Log()
-		http.GenericServerError.Write(conn)
-		return nil, false
+		return nil, nil, err
 	}
 
 	if project == nil {
-		resProjectNotFound.Write(conn)
-		return nil, false
+		return nil, resProjectNotFound, nil
 	}
-	return authen.NewEnv(project), true
+	return authen.NewEnv(project), nil, nil
 }
 
-func createSingleTenancyLoader(config *config.TOTP) func(conn *fasthttp.RequestCtx) (*authen.Env, bool) {
+func createSingleTenancyLoader(config *config.TOTP) func(conn *fasthttp.RequestCtx) (*authen.Env, http.Response, error) {
 	project := authen.NewProject(&data.Project{
 		Id:               "00000000-00000000-00000000-00000000",
 		TOTPMax:          config.Max,
@@ -98,7 +91,7 @@ func createSingleTenancyLoader(config *config.TOTP) func(conn *fasthttp.RequestC
 		TOTPSecretLength: config.SecretLength,
 	})
 
-	return func(conn *fasthttp.RequestCtx) (*authen.Env, bool) {
-		return authen.NewEnv(project), true
+	return func(conn *fasthttp.RequestCtx) (*authen.Env, http.Response, error) {
+		return authen.NewEnv(project), nil, nil
 	}
 }

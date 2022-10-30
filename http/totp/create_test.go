@@ -19,7 +19,7 @@ func Test_Create_InvalidBody(t *testing.T) {
 	request.ReqT(t, authen.BuildEnv().Env()).
 		Body("nope").
 		Post(Create).
-		ExpectInvalid(2004)
+		ExpectInvalid(2003)
 }
 
 func Test_Create_InvalidData(t *testing.T) {
