@@ -53,7 +53,6 @@ func handler() func(ctx *fasthttp.RequestCtx) {
 
 	r.POST("/v1/totp", http.Handler("totp_create", envLoader, totp.Create))
 	r.POST("/v1/totp/verify", http.Handler("totp_verify", envLoader, totp.Verify))
-	r.POST("/v1/totp/confirm", http.Handler("totp_confirm", envLoader, totp.Confirm))
 	r.POST("/v1/totp/delete", http.Handler("totp_delete", envLoader, totp.Delete))
 	r.POST("/v1/totp/change_key", http.Handler("totp_change_key", envLoader, totp.ChangeKey))
 

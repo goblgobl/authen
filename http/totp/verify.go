@@ -20,7 +20,8 @@ var (
 		Field(keyValidation).
 		Field(typeValidation).
 		Field(codeValidation).
-		Field(userIdValidation)
+		Field(userIdValidation).
+		Field(validation.Bool("pending"))
 )
 
 func Verify(conn *fasthttp.RequestCtx, env *authen.Env) (http.Response, error) {
@@ -34,10 +35,15 @@ func Verify(conn *fasthttp.RequestCtx, env *authen.Env) (http.Response, error) {
 		return http.Validation(validator), nil
 	}
 
+	projectId := env.Project.Id
+	tpe := input.String("type")
+	pending := input.Bool("pending")
+	userId := input.String("user_id")
+
 	result, err := storage.DB.TOTPGet(data.TOTPGet{
-		Type:      input.String("type"),
-		UserId:    input.String("user_id"),
-		Pending:   false,
+		Type:      tpe,
+		UserId:    userId,
+		Pending:   pending,
 		ProjectId: env.Project.Id,
 	})
 	if err != nil {
@@ -58,5 +64,14 @@ func Verify(conn *fasthttp.RequestCtx, env *authen.Env) (http.Response, error) {
 	if !totp.VerifyTime(input.String("code"), time.Now()) {
 		return resIncorrectCode, nil
 	}
-	return resOK, nil
+
+	if pending {
+		_, err = storage.DB.TOTPCreate(data.TOTPCreate{
+			UserId:    userId,
+			Type:      tpe,
+			ProjectId: projectId,
+			Secret:    encrypted,
+		})
+	}
+	return resOK, err
 }

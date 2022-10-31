@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 
 	"src.goblgobl.com/authen/codes"
+	"src.goblgobl.com/utils/http"
 	"src.goblgobl.com/utils/typed"
 	"src.goblgobl.com/utils/validation"
 )
@@ -16,6 +17,11 @@ var (
 	// 32 bits hex encoded
 	keyValidation    = validation.String("key").Required().Length(64, 64).Convert(validateKey)
 	newKeyValidation = keyValidation.Clone("new_key")
+
+	resNotFound      = http.StaticError(400, codes.RES_TOTP_NOT_FOUND, "TOTP not found")
+	resIncorrectKey  = http.StaticError(400, codes.RES_TOTP_INCORRECT_KEY, "key is not correct")
+	resIncorrectCode = http.StaticError(400, codes.RES_TOTP_INCORRECT_CODE, "code is not correct")
+	resOK            = http.Ok(nil)
 )
 
 func validateKey(field string, value string, _input typed.Typed, res *validation.Result) any {
