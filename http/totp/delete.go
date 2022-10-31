@@ -13,7 +13,8 @@ import (
 var (
 	deleteValidation = validation.Input().
 		Field(typeValidation).
-		Field(userIdValidation)
+		Field(userIdValidation).
+		Field(validation.Bool("all_types"))
 )
 
 func Delete(conn *fasthttp.RequestCtx, env *authen.Env) (http.Response, error) {
@@ -27,10 +28,20 @@ func Delete(conn *fasthttp.RequestCtx, env *authen.Env) (http.Response, error) {
 		return http.Validation(validator), nil
 	}
 
-	err = storage.DB.TOTPDelete(data.TOTPGet{
+	deleted, err := storage.DB.TOTPDelete(data.TOTPGet{
 		ProjectId: env.Project.Id,
 		Type:      input.String("type"),
 		UserId:    input.String("user_id"),
+		AllTypes:  input.Bool("all_types"),
 	})
-	return resOK, err
+
+	if err != nil {
+		return nil, err
+	}
+
+	return http.Ok(struct {
+		Deleted int `json:"deleted"`
+	}{
+		Deleted: deleted,
+	}), nil
 }

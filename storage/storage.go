@@ -28,7 +28,7 @@ type Storage interface {
 
 	TOTPGet(opts data.TOTPGet) (data.TOTPGetResult, error)
 	TOTPCreate(opts data.TOTPCreate) (data.TOTPCreateResult, error)
-	TOTPDelete(opts data.TOTPGet) error
+	TOTPDelete(opts data.TOTPGet) (int, error)
 }
 
 func Configure(config Config) (err error) {

@@ -189,23 +189,24 @@ func (c Conn) TOTPGet(opts data.TOTPGet) (data.TOTPGetResult, error) {
 	}, nil
 }
 
-func (c Conn) TOTPDelete(opts data.TOTPGet) error {
+func (c Conn) TOTPDelete(opts data.TOTPGet) (int, error) {
 	tpe := opts.Type
 	userId := opts.UserId
+	allTypes := opts.AllTypes
 	projectId := opts.ProjectId
 
 	err := c.Exec(`
 		delete from authen_totps
 		where project_id = ?1
 			and user_id = ?2
-			and (type = ?3 or ?3 = '')
-	`, projectId, userId, tpe)
+			and (type = ?3 or ?4)
+	`, projectId, userId, tpe, allTypes)
 
 	if err != nil {
-		return fmt.Errorf("Sqlite.TOTPDelete - %w", err)
+		return 0, fmt.Errorf("Sqlite.TOTPDelete - %w", err)
 	}
 
-	return nil
+	return c.Changes(), nil
 }
 
 func (c Conn) totpCanAdd(projectId string, userId string, tpe string, max int) (bool, error) {

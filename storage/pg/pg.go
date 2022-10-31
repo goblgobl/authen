@@ -197,23 +197,23 @@ func (db DB) TOTPGet(opts data.TOTPGet) (data.TOTPGetResult, error) {
 	}, nil
 }
 
-func (db DB) TOTPDelete(opts data.TOTPGet) error {
+func (db DB) TOTPDelete(opts data.TOTPGet) (int, error) {
 	tpe := opts.Type
 	userId := opts.UserId
+	allTypes := opts.AllTypes
 	projectId := opts.ProjectId
 
-	_, err := db.Exec(context.Background(), `
+	cmd, err := db.Exec(context.Background(), `
 		delete from authen_totps
 		where project_id = $1
 			and user_id = $2
-			and (type = $3 or $3 = '')
-	`, projectId, userId, tpe)
+			and (type = $3 or $4)
+	`, projectId, userId, tpe, allTypes)
 
 	if err != nil {
-		return fmt.Errorf("PG.TOTPDelete - %w", err)
+		return 0, fmt.Errorf("PG.TOTPDelete - %w", err)
 	}
-
-	return nil
+	return int(cmd.RowsAffected()), nil
 }
 
 func (db DB) canAddTOTP(projectId string, userId string, tpe string, max int) (bool, error) {

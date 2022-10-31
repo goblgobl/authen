@@ -357,21 +357,25 @@ func Test_TOTPDelete(t *testing.T) {
 		`, projectId1, projectId2)
 
 	// specific type
-	err := db.TOTPDelete(data.TOTPGet{
+	deleted, err := db.TOTPDelete(data.TOTPGet{
 		Type:      "t1",
 		UserId:    "u1",
 		ProjectId: projectId1,
 	})
 	assert.Nil(t, err)
+	assert.Equal(t, deleted, 1)
 	assertCount(5)
 	assertCount(0, projectId1, "u1", "t1")
 
 	// all types for the user
-	err = db.TOTPDelete(data.TOTPGet{
+	deleted, err = db.TOTPDelete(data.TOTPGet{
 		UserId:    "u2",
+		AllTypes:  true,
 		ProjectId: projectId1,
 	})
 	assert.Nil(t, err)
+	assert.Equal(t, deleted, 3)
+
 	assertCount(2)
 	assertCount(0, projectId1, "u2")
 }

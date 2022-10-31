@@ -31,6 +31,7 @@ type TOTPGet struct {
 	UserId    string
 	Type      string
 	Pending   bool
+	AllTypes  bool
 }
 
 type TOTPGetResult struct {

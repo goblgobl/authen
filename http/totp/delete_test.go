@@ -50,11 +50,13 @@ func Test_Deletes_Specific_Type(t *testing.T) {
 	tests.Factory.TOTP.Insert("project_id", projectId, "user_id", userId1, "type", "t2", "created", now.Add(time.Second*20))
 	tests.Factory.TOTP.Insert("project_id", projectId, "user_id", userId2, "type", "t1", "created", now.Add(time.Second*30))
 
-	request.ReqT(t, env).
+	body := request.ReqT(t, env).
 		Body(map[string]any{
 			"type":    "t1",
 			"user_id": userId1,
-		}).Post(Delete).OK()
+		}).Post(Delete).OK().Json
+
+	assert.Equal(t, body.Int("deleted"), 1)
 
 	rows := tests.Rows("select * from authen_totps where project_id = $1 order by created", projectId)
 	assert.Equal(t, len(rows), 2)
@@ -74,10 +76,13 @@ func Test_Deletes_Specific_All_Types(t *testing.T) {
 	tests.Factory.TOTP.Insert("project_id", projectId, "user_id", userId1, "type", "t2")
 	tests.Factory.TOTP.Insert("project_id", projectId, "user_id", userId2, "type", "t1")
 
-	request.ReqT(t, env).
+	body := request.ReqT(t, env).
 		Body(map[string]any{
-			"user_id": userId1,
-		}).Post(Delete).OK()
+			"user_id":   userId1,
+			"all_types": true,
+		}).Post(Delete).OK().Json
+
+	assert.Equal(t, body.Int("deleted"), 2)
 
 	rows := tests.Rows("select * from authen_totps where project_id = $1", projectId)
 	assert.Equal(t, len(rows), 1)
