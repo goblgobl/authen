@@ -42,7 +42,7 @@ func updateProjectsUpdatedSince(t time.Time) {
 	}
 
 	for _, data := range updatedProjects {
-		project := NewProject(data)
+		project := NewProject(data, true)
 		Projects.Put(project.Id, project)
 	}
 }

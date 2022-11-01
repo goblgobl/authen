@@ -90,7 +90,7 @@ func createSingleTenancyLoader(config *config.TOTP) func(conn *fasthttp.RequestC
 		TOTPIssuer:       config.Issuer,
 		TOTPSetupTTL:     config.SetupTTL,
 		TOTPSecretLength: config.SecretLength,
-	})
+	}, false)
 
 	return func(conn *fasthttp.RequestCtx) (*authen.Env, http.Response, error) {
 		return authen.NewEnv(project), nil, nil

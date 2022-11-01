@@ -44,19 +44,25 @@ func loadProject(id string) (*Project, error) {
 	if projectData == nil || err != nil {
 		return nil, err
 	}
-	return NewProject(projectData), nil
+	return NewProject(projectData, true), nil
 }
 
-func NewProject(projectData *data.Project) *Project {
+func NewProject(projectData *data.Project, logProjectId bool) *Project {
 	id := projectData.Id
 
+	var logField log.Field
+	if logProjectId {
+		logField = log.NewField().String("pid", id).Finalize()
+	}
+
 	return &Project{
+		logField: logField,
+
 		Id:               id,
 		TOTPMax:          projectData.TOTPMax,
 		TOTPIssuer:       projectData.TOTPIssuer,
 		TOTPSetupTTL:     time.Duration(projectData.TOTPSetupTTL) * time.Second,
 		TOTPSecretLength: projectData.TOTPSecretLength,
-		logField:         log.NewField().String("pid", id).Finalize(),
 
 		// If we let this start at 0, then restarts are likely to produce duplicates.
 		// While we make no guarantees about the uniqueness of the requestId, there's
