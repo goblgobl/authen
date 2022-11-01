@@ -43,19 +43,21 @@ func Listen() {
 func handler() func(ctx *fasthttp.RequestCtx) {
 	r := router.New()
 	// misc routes
-	r.GET("/v1/ping", misc.Ping)
-	r.GET("/v1/info", misc.Info)
+	r.GET("/v1/ping", http.NoEnvHandler("ping", misc.Ping))
+	r.GET("/v1/info", http.NoEnvHandler("info", misc.Info))
 
 	envLoader := loadMultiTenancyEnv
 	if !authen.Config.MultiTenancy {
 		envLoader = createSingleTenancyLoader(authen.Config.TOTP)
 	}
 
+	// TOTP routes
 	r.POST("/v1/totp", http.Handler("totp_create", envLoader, totp.Create))
 	r.POST("/v1/totp/verify", http.Handler("totp_verify", envLoader, totp.Verify))
 	r.POST("/v1/totp/delete", http.Handler("totp_delete", envLoader, totp.Delete))
 	r.POST("/v1/totp/change_key", http.Handler("totp_change_key", envLoader, totp.ChangeKey))
 
+	// catch all
 	r.NotFound = func(ctx *fasthttp.RequestCtx) {
 		resNotFoundPath.Write(ctx)
 	}

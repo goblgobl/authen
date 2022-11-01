@@ -2,31 +2,25 @@ package misc
 
 import (
 	_ "embed"
+	"fmt"
 	"runtime"
 
 	"github.com/valyala/fasthttp"
 	"src.goblgobl.com/authen/storage"
 	"src.goblgobl.com/utils/http"
-	"src.goblgobl.com/utils/json"
-	"src.goblgobl.com/utils/log"
 )
 
 //go:generate make commit.txt
 //go:embed commit.txt
 var commit string
 
-func Info(conn *fasthttp.RequestCtx) {
-	conn.SetContentTypeBytes([]byte("application/json"))
-
+func Info(conn *fasthttp.RequestCtx) (http.Response, error) {
 	storageInfo, err := storage.DB.Info()
-
 	if err != nil {
-		log.Error("storage_info").Err(err).Log()
-		http.ServerError().Write(conn)
-		return
+		return nil, fmt.Errorf("storage info - %w", err)
 	}
 
-	data, err := json.Marshal(struct {
+	return http.Ok(struct {
 		Go      string `json:"go"`
 		Commit  string `json:"commit"`
 		Storage any    `json:"storage"`
@@ -34,13 +28,5 @@ func Info(conn *fasthttp.RequestCtx) {
 		Commit:  commit,
 		Go:      runtime.Version(),
 		Storage: storageInfo,
-	})
-
-	if err != nil {
-		log.Error("info_serialize").Err(err).Log()
-		http.ServerError().Write(conn)
-	} else {
-		conn.SetStatusCode(200)
-		conn.Response.SetBody(data)
-	}
+	}), nil
 }
