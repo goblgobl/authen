@@ -1,0 +1,46 @@
+name: Main
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      -
+        name: Checkout
+        uses: actions/checkout@v3
+      -
+        name: commit.txt
+        run: git rev-parse HEAD | tr -d "\n" > http/misc/commit.txt
+      -
+        name: Build
+        uses: crazy-max/ghaction-xgo@v2
+        with:
+          pkg: "cmd"
+          trimpath: true
+          prefix: authen
+          ldflags: -s -w
+          targets: linux/amd64,linux/arm64,darwin/amd64,darwin/arm64
+      -
+        name: Shrink (UPX)
+        uses: crazy-max/ghaction-upx@v2
+        with:
+          version: latest
+          files: |
+            /home/runner/work/authen/authen/build/authen-linux-amd64
+            /home/runner/work/authen/authen/build/authen-linux-arm64
+            /home/runner/work/authen/authen/build/authen-darwin-arm64
+            /home/runner/work/authen/authen/build/authen-darwin-amd64
+      -
+        name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            LICENSE
+            /home/runner/work/authen/authen/build/authen-linux-amd64
+            /home/runner/work/authen/authen/build/authen-linux-arm64
+            /home/runner/work/authen/authen/build/authen-darwin-arm64
+            /home/runner/work/authen/authen/build/authen-darwin-amd64
