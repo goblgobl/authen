@@ -39,5 +39,5 @@ commit.txt:
 	@git rev-parse HEAD | tr -d "\n" > http/misc/commit.txt
 
 .PHONY: build
-build:
+build: commit.txt
 	go build -ldflags="-s -w" -o authen cmd/main.go
