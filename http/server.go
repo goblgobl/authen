@@ -5,7 +5,7 @@ import (
 	"src.goblgobl.com/authen/codes"
 	"src.goblgobl.com/authen/config"
 	"src.goblgobl.com/authen/http/misc"
-	"src.goblgobl.com/authen/http/totp"
+	"src.goblgobl.com/authen/http/totps"
 	"src.goblgobl.com/authen/storage/data"
 	"src.goblgobl.com/utils"
 	"src.goblgobl.com/utils/http"
@@ -52,10 +52,10 @@ func handler() func(ctx *fasthttp.RequestCtx) {
 	}
 
 	// TOTP routes
-	r.POST("/v1/totp", http.Handler("totp_create", envLoader, totp.Create))
-	r.POST("/v1/totp/verify", http.Handler("totp_verify", envLoader, totp.Verify))
-	r.POST("/v1/totp/delete", http.Handler("totp_delete", envLoader, totp.Delete))
-	r.POST("/v1/totp/change_key", http.Handler("totp_change_key", envLoader, totp.ChangeKey))
+	r.POST("/v1/totps", http.Handler("totp_create", envLoader, totps.Create))
+	r.POST("/v1/totps/verify", http.Handler("totp_verify", envLoader, totps.Verify))
+	r.POST("/v1/totps/delete", http.Handler("totp_delete", envLoader, totps.Delete))
+	r.POST("/v1/totps/change_key", http.Handler("totp_change_key", envLoader, totps.ChangeKey))
 
 	// catch all
 	r.NotFound = func(ctx *fasthttp.RequestCtx) {

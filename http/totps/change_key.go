@@ -1,4 +1,4 @@
-package totp
+package totps
 
 import (
 	"github.com/valyala/fasthttp"
