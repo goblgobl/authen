@@ -1,4 +1,9 @@
 {
 	"storage": {"type": "sqlite"},
-	"totp": {"issuer": "gobl.test"}
+	"totp": {
+		"max": 92,
+		"setup_ttl": 112,
+		"secret_length": 17,
+		"issuer": "gobl1.test"
+	}
 }

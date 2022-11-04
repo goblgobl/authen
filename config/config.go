@@ -16,6 +16,7 @@ type Config struct {
 	MultiTenancy           bool              `json:"multi_tenancy"`
 	HTTP                   HTTP              `json:"http"`
 	TOTP                   *TOTP             `json:"totp"`
+	Ticket                 *Ticket           `json:"ticket"`
 	Log                    log.Config        `json:"log"`
 	Storage                storage.Config    `json:"storage"`
 	Validation             validation.Config `json:"validation"`
@@ -31,6 +32,11 @@ type TOTP struct {
 	Issuer       string `json:"issuer"`
 	SetupTTL     int    `json:"setup_ttl"`
 	SecretLength int    `json:"secret_length"`
+}
+
+type Ticket struct {
+	Max              int `json:"max"`
+	MaxPayloadLength int `json:"max_payload_length"`
 }
 
 func Configure(filePath string) (Config, error) {
@@ -72,6 +78,14 @@ func Configure(filePath string) (Config, error) {
 		if totp.SecretLength == 0 {
 			totp.SecretLength = 16
 		}
+	}
+
+	ticket := config.Ticket
+	if config.MultiTenancy && ticket != nil {
+		log.Warn("multi_tenancy_ticket").String("details", "'ticket' configuration settings are ignored when multi_tenancy=true").Log()
+	}
+	if !config.MultiTenancy && ticket == nil {
+		config.Ticket = new(Ticket)
 	}
 
 	return config, nil

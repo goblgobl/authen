@@ -27,11 +27,13 @@ type Project struct {
 	// the pid=$id field
 	logField log.Field
 
-	Id               string
-	TOTPMax          int           `json:"totp_max"`
-	TOTPIssuer       string        `json:"totp_issuer"`
-	TOTPSetupTTL     time.Duration `json:"totp_setup_ttl"`
-	TOTPSecretLength int           `json:"totp_secret_length"`
+	Id                     string
+	TOTPMax                int           `json:"totp_max"`
+	TOTPIssuer             string        `json:"totp_issuer"`
+	TOTPSetupTTL           time.Duration `json:"totp_setup_ttl"`
+	TOTPSecretLength       int           `json:"totp_secret_length"`
+	TicketMax              int           `json:"ticket_max"`
+	TicketMaxPayloadLength int           `json:"ticket_max_payload_length"`
 }
 
 func (p *Project) NextRequestId() string {
@@ -58,11 +60,13 @@ func NewProject(projectData *data.Project, logProjectId bool) *Project {
 	return &Project{
 		logField: logField,
 
-		Id:               id,
-		TOTPMax:          projectData.TOTPMax,
-		TOTPIssuer:       projectData.TOTPIssuer,
-		TOTPSetupTTL:     time.Duration(projectData.TOTPSetupTTL) * time.Second,
-		TOTPSecretLength: projectData.TOTPSecretLength,
+		Id:                     id,
+		TOTPMax:                projectData.TOTPMax,
+		TOTPIssuer:             projectData.TOTPIssuer,
+		TOTPSetupTTL:           time.Duration(projectData.TOTPSetupTTL) * time.Second,
+		TOTPSecretLength:       projectData.TOTPSecretLength,
+		TicketMax:              projectData.TicketMax,
+		TicketMaxPayloadLength: projectData.TicketMaxPayloadLength,
 
 		// If we let this start at 0, then restarts are likely to produce duplicates.
 		// While we make no guarantees about the uniqueness of the requestId, there's

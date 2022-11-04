@@ -59,7 +59,9 @@ func (db DB) Info() (any, error) {
 
 func (db DB) GetProject(id string) (*data.Project, error) {
 	row := db.QueryRow(context.Background(), `
-		select id, totp_issuer, totp_max, totp_setup_ttl, totp_secret_length
+		select id,
+			totp_issuer, totp_max, totp_setup_ttl, totp_secret_length,
+			ticket_max, ticket_max_payload_length
 		from authen_projects
 		where id = $1
 	`, id)
@@ -87,7 +89,12 @@ func (db DB) GetUpdatedProjects(timestamp time.Time) ([]*data.Project, error) {
 		return nil, fmt.Errorf("PG.GetUpdatedProjects (count) - %w", err)
 	}
 
-	rows, err := db.Query(context.Background(), "select id, totp_issuer, totp_max, totp_setup_ttl, totp_secret_length from authen_projects where updated > $1", timestamp)
+	rows, err := db.Query(context.Background(), `
+		select id,
+			totp_issuer, totp_max, totp_setup_ttl, totp_secret_length,
+			ticket_max, ticket_max_payload_length
+		from authen_projects where updated > $1
+	`, timestamp)
 	if err != nil {
 		return nil, fmt.Errorf("PG.GetUpdatedProjects (select) - %w", err)
 	}
@@ -216,6 +223,100 @@ func (db DB) TOTPDelete(opts data.TOTPGet) (int, error) {
 	return int(cmd.RowsAffected()), nil
 }
 
+func (db DB) TicketCreate(opts data.TicketCreate) (data.TicketCreateResult, error) {
+	max := opts.Max
+	uses := opts.Uses
+	ticket := opts.Ticket
+	expires := opts.Expires
+	payload := opts.Payload
+	projectId := opts.ProjectId
+
+	var result data.TicketCreateResult
+
+	canAdd, err := db.ticketCanAdd(projectId, max)
+	if err != nil {
+		return result, err
+	}
+
+	if !canAdd {
+		result.Status = data.TICKET_CREATE_MAX
+		return result, nil
+	}
+
+	_, err = db.Exec(context.Background(), `
+		insert into authen_tickets (project_id, ticket, expires, uses, payload)
+		values ($1, $2, $3, $4, $5)
+	`, projectId, ticket, expires, uses, payload)
+
+	if err != nil {
+		return result, fmt.Errorf("PG.TicketCreate - %w", err)
+	}
+
+	result.Status = data.TICKET_CREATE_OK
+	return result, nil
+}
+
+func (db DB) TicketUse(opts data.TicketUse) (data.TicketUseResult, error) {
+	ticket := opts.Ticket
+	projectId := opts.ProjectId
+
+	var result data.TicketUseResult
+
+	row := db.QueryRow(context.Background(), `
+		update authen_tickets
+		set uses = uses - 1
+		where project_id = $1
+			and ticket = $2
+			and (uses is null or uses > 0)
+			and (expires is null or expires > now())
+		returning uses, payload
+	`, projectId, ticket)
+
+	var uses *int
+	var payload *[]byte
+	if err := row.Scan(&uses, &payload); err != nil {
+		if err == pg.ErrNoRows {
+			result.Status = data.TICKET_USE_NOT_FOUND
+			return result, nil
+		}
+		return result, fmt.Errorf("PG.TicketUse - %w", err)
+	}
+
+	result.Status = data.TICKET_USE_OK
+	result.Payload = payload
+	result.Uses = uses
+	return result, nil
+}
+
+func (db DB) TicketDelete(opts data.TicketUse) (data.TicketUseResult, error) {
+	ticket := opts.Ticket
+	projectId := opts.ProjectId
+
+	var result data.TicketUseResult
+
+	row := db.QueryRow(context.Background(), `
+		delete from authen_tickets
+		where project_id = $1
+			and ticket = $2
+			and (uses is null or uses > 0)
+			and (expires is null or expires > now())
+		returning uses
+	`, projectId, ticket)
+
+	var uses *int
+	if err := row.Scan(&uses); err != nil {
+		if err == pg.ErrNoRows {
+			result.Status = data.TICKET_USE_NOT_FOUND
+			return result, nil
+		}
+		return result, fmt.Errorf("PG.TicketDelete - %w", err)
+	}
+
+	result.Status = data.TICKET_USE_OK
+	result.Uses = uses
+	return result, nil
+}
+
 func (db DB) canAddTOTP(projectId string, userId string, tpe string, max int) (bool, error) {
 	// no limit
 	if max == 0 {
@@ -250,18 +351,44 @@ func (db DB) canAddTOTP(projectId string, userId string, tpe string, max int) (b
 	return count < max, nil
 }
 
+func (db DB) ticketCanAdd(projectId string, max int) (bool, error) {
+	// no limit
+	if max == 0 {
+		return true, nil
+	}
+
+	count, err := pg.Scalar[int](db.DB, `
+		select count(*)
+		from authen_tickets
+		where project_id = $1
+	`, projectId)
+
+	if err != nil {
+		return false, fmt.Errorf("PG.ticketCanAdd (count) - %w", err)
+	}
+	return count < max, nil
+}
+
 func scanProject(row pg.Row) (*data.Project, error) {
 	var id, totpIssuer string
 	var totpMax, totpSetupTTL, totpSecretLength int
-	if err := row.Scan(&id, &totpIssuer, &totpMax, &totpSetupTTL, &totpSecretLength); err != nil {
+	var ticketMax, ticketMaxPayloadLength int
+
+	err := row.Scan(&id,
+		&totpIssuer, &totpMax, &totpSetupTTL, &totpSecretLength,
+		&ticketMax, &ticketMaxPayloadLength)
+
+	if err != nil {
 		return nil, fmt.Errorf("PG.scanProject - %w", err)
 	}
 
 	return &data.Project{
-		Id:               id,
-		TOTPMax:          totpMax,
-		TOTPIssuer:       totpIssuer,
-		TOTPSetupTTL:     totpSetupTTL,
-		TOTPSecretLength: totpSecretLength,
+		Id:                     id,
+		TOTPMax:                totpMax,
+		TOTPIssuer:             totpIssuer,
+		TOTPSetupTTL:           totpSetupTTL,
+		TOTPSecretLength:       totpSecretLength,
+		TicketMax:              ticketMax,
+		TicketMaxPayloadLength: ticketMaxPayloadLength,
 	}, nil
 }

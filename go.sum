@@ -63,9 +63,9 @@ golang.org/x/tools v0.0.0-20180917221912-90fa682c2a6e/go.mod h1:n7NCudcB/nEzxVGm
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
 gopkg.in/yaml.v2 v2.2.2/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
 gopkg.in/yaml.v3 v3.0.1 h1:fxVm/GzAzEWqLHuvctI91KS9hhNmmWOoWu0XTYJS7CA=
-src.goblgobl.com/sqlite v0.0.2 h1:M+uop2fzhq0q08ShhmTQnda3tBsmknHeVInZjIHZny0=
-src.goblgobl.com/sqlite v0.0.2/go.mod h1:5r9UpObAtw8WyRyiYbtqB61eTY2QTAp+R9PjQS2mDhI=
+src.goblgobl.com/sqlite v0.0.4 h1:QQi7htjNTamc2+BfPNtNOaXrVKm2KGBwigja6C9erMc=
+src.goblgobl.com/sqlite v0.0.4/go.mod h1:5r9UpObAtw8WyRyiYbtqB61eTY2QTAp+R9PjQS2mDhI=
 src.goblgobl.com/tests v0.0.2 h1:EYEh0oQgmduxpPPXUoPUgCxBvaG63hQaDJuHbb/KxV4=
 src.goblgobl.com/tests v0.0.2/go.mod h1:1v5UDCInXPlGkspjVBM+PvLbIlnepKn8M9duFbK+rfA=
-src.goblgobl.com/utils v0.0.2 h1:G2uPX00rSSp2BwlKCPdhVAatoW1YpzKfCCf+645wl00=
-src.goblgobl.com/utils v0.0.2/go.mod h1:2hnt30FImNFTrnhGE62HiajYolrfutEZpwGA+eMd4EA=
+src.goblgobl.com/utils v0.0.3 h1:h78hO1lgiHNkkdBAug7NHhIxKu5s7NvKEfU51z20PNw=
+src.goblgobl.com/utils v0.0.3/go.mod h1:f8qLkn2FMRbbtfdD16zeyAClIdvRMvKvdgptBRRXZng=

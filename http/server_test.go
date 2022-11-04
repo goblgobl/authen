@@ -123,11 +123,17 @@ func Test_Server_MultiTenancy_LogsError(t *testing.T) {
 }
 
 func Test_Server_SingleTenancy_CallsHandlerWithProject(t *testing.T) {
-	loader := createSingleTenancyLoader(&config.TOTP{
-		Max:          1,
-		Issuer:       "test-issuer",
-		SetupTTL:     22,
-		SecretLength: 8,
+	loader := createSingleTenancyLoader(config.Config{
+		TOTP: &config.TOTP{
+			Max:          1,
+			Issuer:       "test-issuer",
+			SetupTTL:     22,
+			SecretLength: 8,
+		},
+		Ticket: &config.Ticket{
+			Max:              99,
+			MaxPayloadLength: 177,
+		},
 	})
 
 	conn := request.Req(t).Conn()
@@ -138,6 +144,8 @@ func Test_Server_SingleTenancy_CallsHandlerWithProject(t *testing.T) {
 		assert.Equal(t, p.TOTPIssuer, "test-issuer")
 		assert.Equal(t, p.TOTPSecretLength, 8)
 		assert.Equal(t, p.TOTPSetupTTL, time.Duration(22)*time.Second)
+		assert.Equal(t, p.TicketMax, 99)
+		assert.Equal(t, p.TicketMaxPayloadLength, 177)
 
 		return http.Ok(map[string]int{"over": 9001}), nil
 	})(conn)

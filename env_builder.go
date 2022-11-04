@@ -40,6 +40,16 @@ func (eb *EnvBuilder) TOTPSetupTTL(max int) *EnvBuilder {
 	return eb
 }
 
+func (eb *EnvBuilder) TicketMax(max int) *EnvBuilder {
+	eb.project.TicketMax = max
+	return eb
+}
+
+func (eb *EnvBuilder) TicketMaxPayloadLength(max int) *EnvBuilder {
+	eb.project.TicketMaxPayloadLength = max
+	return eb
+}
+
 func (eb *EnvBuilder) Env() *Env {
 	project := eb.project
 	if project == nil {

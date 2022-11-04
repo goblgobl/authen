@@ -16,6 +16,7 @@ import (
 	"src.goblgobl.com/authen/storage/pg"
 	"src.goblgobl.com/authen/storage/sqlite"
 	"src.goblgobl.com/tests"
+	"src.goblgobl.com/utils/log"
 	"src.goblgobl.com/utils/typed"
 	"src.goblgobl.com/utils/validation"
 )
@@ -24,7 +25,15 @@ var generator tests.Generator
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
-	err := validation.Configure(validation.Config{
+
+	err := log.Configure(log.Config{
+		Level: "WARN",
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	err = validation.Configure(validation.Config{
 		PoolSize:  1,
 		MaxErrors: 10,
 	})
@@ -47,6 +56,7 @@ func init() {
 	if err := storage.DB.EnsureMigrations(); err != nil {
 		panic(err)
 	}
+
 }
 
 func String(constraints ...int) string {

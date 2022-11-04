@@ -62,8 +62,8 @@ func Test_GetProject_Success(t *testing.T) {
 	id := uuid.String()
 	db.MustExec("truncate table authen_projects")
 	db.MustExec(`
-		insert into authen_projects (id, totp_issuer, totp_max, totp_setup_ttl, totp_secret_length)
-		values ($1, 'goblgobl.com', 84, 124, 38)
+		insert into authen_projects (id, totp_issuer, totp_max, totp_setup_ttl, totp_secret_length, ticket_max, ticket_max_payload_length)
+		values ($1, 'goblgobl.com', 84, 124, 38, 49, 1022)
 	`, id)
 
 	p, err := db.GetProject(id)
@@ -73,14 +73,16 @@ func Test_GetProject_Success(t *testing.T) {
 	assert.Equal(t, p.TOTPSetupTTL, 124)
 	assert.Equal(t, p.TOTPSecretLength, 38)
 	assert.Equal(t, p.TOTPIssuer, "goblgobl.com")
+	assert.Equal(t, p.TicketMax, 49)
+	assert.Equal(t, p.TicketMaxPayloadLength, 1022)
 }
 
 func Test_GetUpdatedProjects_None(t *testing.T) {
 	id := uuid.String()
 	db.MustExec("truncate table authen_projects")
 	db.MustExec(`
-		insert into authen_projects (id, totp_issuer, totp_max, totp_setup_ttl, totp_secret_length, updated)
-		values ($1, '', 11, 12, 13, now() - interval '1 second')
+		insert into authen_projects (id, updated, totp_issuer, totp_max, totp_setup_ttl, totp_secret_length, ticket_max, ticket_max_payload_length)
+		values ($1, now() - interval '1 second', '', 0, 0, 0, 0, 0)
 	`, id)
 	updated, err := db.GetUpdatedProjects(time.Now())
 	assert.Nil(t, err)
@@ -91,12 +93,12 @@ func Test_GetUpdatedProjects_Success(t *testing.T) {
 	id1, id2, id3, id4 := uuid.String(), uuid.String(), uuid.String(), uuid.String()
 	db.MustExec("truncate table authen_projects")
 	db.MustExec(`
-			insert into authen_projects (id, totp_issuer, totp_max, totp_setup_ttl, totp_secret_length, updated) values
-			($1, '', 1, 11, 21, now() - interval '500 second'),
-			($2, '', 2, 12, 22, now() - interval '200 second'),
-			($3, '', 3, 13, 23, now() - interval '100 second'),
-			($4, '', 4, 14, 24, now() - interval '10 second')
-		`, id1, id2, id3, id4)
+		insert into authen_projects (id, updated, totp_issuer, totp_max, totp_setup_ttl, totp_secret_length, ticket_max, ticket_max_payload_length) values
+		($1, now() - interval '500 second', '', 0, 0, 0, 0, 0),
+		($2, now() - interval '200 second', '', 0, 0, 0, 0, 0),
+		($3, now() - interval '100 second', '', 0, 0, 0, 0, 0),
+		($4, now() - interval '10 second', '', 0, 0, 0, 0, 0)
+	`, id1, id2, id3, id4)
 	updated, err := db.GetUpdatedProjects(time.Now().Add(time.Second * -105))
 	assert.Nil(t, err)
 	assert.Equal(t, len(updated), 2)
@@ -113,10 +115,10 @@ func Test_TOTPCreate(t *testing.T) {
 	projectId1, projectId2 := uuid.String(), uuid.String()
 
 	db.MustExec(`
-			insert into authen_totps (project_id, user_id, type, pending, secret) values
-			($1, 'u1', 't1', false, 'sec1'),
-			($2, 'u2', 't2', true, 'sec2')
-		`, projectId1, projectId1)
+		insert into authen_totps (project_id, user_id, type, pending, secret) values
+		($1, 'u1', 't1', false, 'sec1'),
+		($2, 'u2', 't2', true, 'sec2')
+	`, projectId1, projectId1)
 
 	// Adds more when less than max
 	for i, expires := range []*time.Time{nil, &now} {
@@ -378,4 +380,255 @@ func Test_TOTPDelete(t *testing.T) {
 
 	assertCount(2)
 	assertCount(0, projectId1, "u2")
+}
+
+func Test_TicketCreate(t *testing.T) {
+	projectId1 := uuid.String()
+
+	assertTicket := func(ticket []byte, payload []byte, expires *time.Time, uses *int) {
+		t.Helper()
+		row, _ := db.RowToMap("select * from authen_tickets where project_id = $1 and ticket = $2", projectId1, ticket)
+		assert.Nowish(t, row.Time("created"))
+		assert.Bytes(t, row.Bytes("payload"), payload)
+		if expires == nil {
+			assert.Nil(t, row["expires"])
+		} else {
+			assert.Timeish(t, row.Time("expires"), *expires)
+		}
+		if uses == nil {
+			assert.Nil(t, row["uses"])
+		} else {
+			assert.Equal(t, row.Int("uses"), *uses)
+		}
+	}
+
+	// without expiry or usage or payload
+	{
+		res, err := db.TicketCreate(data.TicketCreate{
+			Max:       2,
+			ProjectId: projectId1,
+			Ticket:    []byte{1, 2, 3},
+		})
+		assert.Nil(t, err)
+		assert.Equal(t, res.Status, data.TICKET_CREATE_OK)
+		assertTicket([]byte{1, 2, 3}, nil, nil, nil)
+	}
+
+	// with expiry and usage
+	{
+		uses := 9
+		expires := time.Now().Add(time.Hour)
+
+		res, err := db.TicketCreate(data.TicketCreate{
+			Max:       0,
+			ProjectId: projectId1,
+			Ticket:    []byte{4, 5, 6},
+			Payload:   []byte{0, 0, 1},
+			Expires:   &expires,
+			Uses:      &uses,
+		})
+		assert.Nil(t, err)
+		assert.Equal(t, res.Status, data.TICKET_CREATE_OK)
+		assertTicket([]byte{4, 5, 6}, []byte{0, 0, 1}, &expires, &uses)
+	}
+
+	// max reached (previous 2 tests inserted a row each)
+	{
+		res, err := db.TicketCreate(data.TicketCreate{
+			Max:       2,
+			ProjectId: projectId1,
+			Ticket:    []byte{9, 9, 9},
+		})
+		assert.Nil(t, err)
+		assert.Equal(t, res.Status, data.TICKET_CREATE_MAX)
+
+		// no new insert
+		count, _ := pg.Scalar[int](db.DB, "select count(*) from authen_tickets where project_id = $1", projectId1)
+		assert.Equal(t, count, 2)
+	}
+}
+
+func Test_TicketUse_Found(t *testing.T) {
+	projectId := uuid.String()
+
+	assertTicket := func(opts data.TicketUse, payload string, uses int) {
+		res, err := db.TicketUse(opts)
+		assert.Nil(t, err)
+		assert.Equal(t, res.Status, data.TICKET_USE_OK)
+
+		if uses == -1 {
+			assert.Nil(t, res.Uses)
+		} else {
+			assert.Equal(t, *res.Uses, uses)
+		}
+
+		if payload == "" {
+			assert.Nil(t, res.Payload)
+		} else {
+			assert.Bytes(t, *res.Payload, []byte(payload))
+		}
+	}
+
+	// setup our data
+	db.MustExec(`
+		insert into authen_tickets (project_id, ticket, payload, uses, expires) values
+		($1, $2, 'd1', 1, null),
+		($1, $3, null, null, null),
+		($1, $4, null, 10, now() + interval '100 seconds')
+	`, projectId, []byte("t1"), []byte("t2"), []byte("t3"))
+
+	assertTicket(data.TicketUse{
+		ProjectId: projectId,
+		Ticket:    []byte("t1"),
+	}, "d1", 0)
+
+	assertTicket(data.TicketUse{
+		ProjectId: projectId,
+		Ticket:    []byte("t2"),
+	}, "", -1)
+
+	assertTicket(data.TicketUse{
+		ProjectId: projectId,
+		Ticket:    []byte("t3"),
+	}, "", 9)
+}
+
+// wrong ticket, no more use or expired
+func Test_TicketUse_NotFound(t *testing.T) {
+	projectId := uuid.String()
+
+	assertNotFound := func(opts data.TicketUse) {
+		res, err := db.TicketUse(opts)
+		assert.Nil(t, err)
+		assert.Equal(t, res.Status, data.TICKET_USE_NOT_FOUND)
+	}
+
+	// setup our data
+	db.MustExec(`
+		insert into authen_tickets (project_id, ticket, payload, uses, expires) values
+		($1, $2, null, 2, null),
+		($1, $3, null, null, now() - interval '1 second')
+	`, projectId, []byte("t1"), []byte("t2"))
+
+	// wrong project
+	assertNotFound(data.TicketUse{
+		ProjectId: "p2",
+		Ticket:    []byte("t1"),
+	})
+
+	// wrong ticket
+	assertNotFound(data.TicketUse{
+		ProjectId: projectId,
+		Ticket:    []byte("t9"),
+	})
+
+	// expired
+	assertNotFound(data.TicketUse{
+		ProjectId: projectId,
+		Ticket:    []byte("t2"),
+	})
+
+	{
+		// important test, checks both our use limit, and that using
+		// a ticket decreases the limit
+
+		// this ticket has 2 uses
+		opts := data.TicketUse{
+			ProjectId: projectId,
+			Ticket:    []byte("t1"),
+		}
+		// 1st use
+		res, _ := db.TicketUse(opts)
+		assert.Equal(t, res.Status, data.TICKET_USE_OK)
+
+		// 2nd use
+		res, _ = db.TicketUse(opts)
+		assert.Equal(t, res.Status, data.TICKET_USE_OK)
+
+		// no more uses
+		assertNotFound(opts)
+	}
+}
+
+func Test_TicketDelete(t *testing.T) {
+	assertDelete := func(opts data.TicketUse, uses int) {
+		t.Helper()
+		res, err := db.TicketDelete(opts)
+		assert.Nil(t, err)
+		if uses == -2 {
+			assert.Equal(t, res.Status, data.TICKET_USE_NOT_FOUND)
+		} else if uses == -1 {
+			assert.Equal(t, res.Status, data.TICKET_USE_OK)
+			assert.Nil(t, res.Uses)
+		} else {
+			assert.Equal(t, res.Status, data.TICKET_USE_OK)
+			assert.Equal(t, *res.Uses, uses)
+		}
+	}
+
+	// setup our data
+	db.MustExec(`
+			insert into authen_tickets (project_id, ticket, payload, uses, expires) values
+			('p1', $1, null, null, null),
+			('p1', $2, null, 3, null),
+			('p1', $3, null, 0, null),
+			('p1', $4, null, 0, now() - interval '1 second')
+		`, []byte("t1"), []byte("t2"), []byte("t3"), []byte("t4"))
+
+	// not found
+	{
+		// wrong project
+		assertDelete(data.TicketUse{
+			ProjectId: "p2",
+			Ticket:    []byte("t1"),
+		}, -2)
+
+		// wrong ticket
+		assertDelete(data.TicketUse{
+			ProjectId: "p1",
+			Ticket:    []byte("t9"),
+		}, -2)
+
+		// no more use
+		assertDelete(data.TicketUse{
+			ProjectId: "p1",
+			Ticket:    []byte("t3"),
+		}, -2)
+
+		// expired
+		assertDelete(data.TicketUse{
+			ProjectId: "p1",
+			Ticket:    []byte("t4"),
+		}, -2)
+	}
+
+	// found with unlimited use
+	{
+		// delete with unlimited use
+		assertDelete(data.TicketUse{
+			ProjectId: "p1",
+			Ticket:    []byte("t1"),
+		}, -1)
+
+		// it's really deleted not, so not found
+		assertDelete(data.TicketUse{
+			ProjectId: "p1",
+			Ticket:    []byte("t1"),
+		}, -2)
+	}
+
+	// found with use
+	{
+		// delete with unlimited use
+		assertDelete(data.TicketUse{
+			ProjectId: "p1",
+			Ticket:    []byte("t2"),
+		}, 3)
+
+		// it's really deleted not, so not found
+		assertDelete(data.TicketUse{
+			ProjectId: "p1",
+			Ticket:    []byte("t2"),
+		}, -2)
+	}
 }

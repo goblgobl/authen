@@ -1,8 +1,11 @@
 package tests
 
 import (
+	"crypto/sha256"
 	"encoding/hex"
 	"time"
+
+	"src.goblgobl.com/utils/json"
 
 	"src.goblgobl.com/authen/storage"
 	f "src.goblgobl.com/tests/factory"
@@ -13,6 +16,7 @@ import (
 type factory struct {
 	Project f.Table
 	TOTP    f.Table
+	Ticket  f.Table
 }
 
 var (
@@ -26,13 +30,15 @@ func init() {
 	f.DB = storage.DB.(f.SQLStorage)
 	Factory.Project = f.NewTable("authen_projects", func(args f.KV) f.KV {
 		return f.KV{
-			"id":                 args.UUID("id", uuid.String()),
-			"totp_max":           args.Int("totp_max", 100),
-			"totp_issuer":        args.String("totp_issuer", ""),
-			"totp_setup_ttl":     args.Int("totp_setup_ttl", 120),
-			"totp_secret_length": args.Int("totp_secret_length", 32),
-			"created":            args.Time("created", time.Now()),
-			"updated":            args.Time("updated", time.Now()),
+			"id":                        args.UUID("id", uuid.String()),
+			"totp_max":                  args.Int("totp_max", 100),
+			"totp_issuer":               args.String("totp_issuer", ""),
+			"totp_setup_ttl":            args.Int("totp_setup_ttl", 120),
+			"totp_secret_length":        args.Int("totp_secret_length", 32),
+			"ticket_max":                args.Int("ticket_max", 100),
+			"ticket_max_payload_length": args.Int("ticket_max_payload_length", 128),
+			"created":                   args.Time("created", time.Now()),
+			"updated":                   args.Time("updated", time.Now()),
 		}
 	})
 
@@ -66,6 +72,29 @@ func init() {
 			"pending":    args.Bool("pending", false),
 			"secret":     encryptedSecret,
 			"expires":    args.Time("expires"),
+			"created":    args.Time("created", time.Now()),
+		}
+	})
+
+	Factory.Ticket = f.NewTable("authen_tickets", func(args f.KV) f.KV {
+		var payload *[]byte
+		if p, ok := args["payload"]; ok {
+			p, err := json.Marshal(p)
+			if err != nil {
+				panic(err)
+			}
+			payload = &p
+		}
+
+		ticket := args.String("ticket", uuid.String()).(string)
+		ticketHash := sha256.Sum256([]byte(ticket))
+
+		return f.KV{
+			"project_id": args.UUID("project_id", uuid.String()),
+			"ticket":     ticketHash[:],
+			"expires":    args.Time("expires"),
+			"uses":       args.Int("uses"),
+			"payload":    payload,
 			"created":    args.Time("created", time.Now()),
 		}
 	})

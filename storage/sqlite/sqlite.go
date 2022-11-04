@@ -53,7 +53,13 @@ func (c Conn) Info() (any, error) {
 }
 
 func (c Conn) GetProject(id string) (*data.Project, error) {
-	row := c.Row("select id, totp_issuer, totp_max, totp_setup_ttl, totp_secret_length from authen_projects where id = ?1", id)
+	row := c.Row(`
+		select id,
+			totp_issuer, totp_max, totp_setup_ttl, totp_secret_length,
+			ticket_max, ticket_max_payload_length
+		from authen_projects
+		where id = ?1
+	`, id)
 
 	project, err := scanProject(row)
 	if err != nil {
@@ -78,7 +84,13 @@ func (c Conn) GetUpdatedProjects(timestamp time.Time) ([]*data.Project, error) {
 		return nil, nil
 	}
 
-	rows := c.Rows("select id, totp_issuer, totp_max, totp_setup_ttl, totp_secret_length from authen_projects where updated > ?1", timestamp)
+	rows := c.Rows(`
+		select id,
+			totp_issuer, totp_max, totp_setup_ttl, totp_secret_length,
+			ticket_max, ticket_max_payload_length
+		from authen_projects
+		where updated > ?1
+	`, timestamp)
 	defer rows.Close()
 
 	projects := make([]*data.Project, 0, count)
@@ -209,6 +221,99 @@ func (c Conn) TOTPDelete(opts data.TOTPGet) (int, error) {
 	return c.Changes(), nil
 }
 
+func (c Conn) TicketCreate(opts data.TicketCreate) (data.TicketCreateResult, error) {
+	max := opts.Max
+	uses := opts.Uses
+	ticket := opts.Ticket
+	expires := opts.Expires
+	payload := opts.Payload
+	projectId := opts.ProjectId
+
+	var result data.TicketCreateResult
+
+	canAdd, err := c.ticketCanAdd(projectId, max)
+	if err != nil {
+		return result, err
+	}
+
+	if !canAdd {
+		result.Status = data.TICKET_CREATE_MAX
+		return result, nil
+	}
+
+	err = c.Exec(`
+		insert into authen_tickets (project_id, ticket, expires, uses, payload)
+		values (?1, ?2, ?3, ?4, ?5)
+	`, projectId, ticket, expires, uses, payload)
+
+	if err != nil {
+		return result, fmt.Errorf("Sqlite.TicketCreate - %w", err)
+	}
+
+	result.Status = data.TICKET_CREATE_OK
+	return result, nil
+}
+
+func (c Conn) TicketUse(opts data.TicketUse) (data.TicketUseResult, error) {
+	ticket := opts.Ticket
+	projectId := opts.ProjectId
+
+	var result data.TicketUseResult
+
+	row := c.Row(`
+		update authen_tickets
+		set uses = uses - 1
+		where project_id = ?1
+			and ticket = ?2
+			and (uses is null or uses > 0)
+			and (expires is null or expires > unixepoch())
+		returning uses, payload
+	`, projectId, ticket)
+
+	var uses *int
+	var payload *[]byte
+	if err := row.Scan(&uses, &payload); err != nil {
+		if err == sqlite.ErrNoRows {
+			result.Status = data.TICKET_USE_NOT_FOUND
+			return result, nil
+		}
+		return result, fmt.Errorf("Sqlite.TicketUse - %w", err)
+	}
+
+	result.Status = data.TICKET_USE_OK
+	result.Payload = payload
+	result.Uses = uses
+	return result, nil
+}
+
+func (c Conn) TicketDelete(opts data.TicketUse) (data.TicketUseResult, error) {
+	ticket := opts.Ticket
+	projectId := opts.ProjectId
+
+	var result data.TicketUseResult
+
+	row := c.Row(`
+		delete from authen_tickets
+		where project_id = ?1 and ticket = ?2
+			and (uses is null or uses > 0)
+			and (expires is null or expires > unixepoch())
+		returning uses
+	`, projectId, ticket)
+
+	var uses *int
+	if err := row.Scan(&uses); err != nil {
+		if err == sqlite.ErrNoRows {
+			result.Status = data.TICKET_USE_NOT_FOUND
+			return result, nil
+		}
+		return result, fmt.Errorf("Sqlite.TicketDelete - %w", err)
+	}
+
+	result.Status = data.TICKET_USE_OK
+	result.Uses = uses
+	return result, nil
+}
+
 func (c Conn) totpCanAdd(projectId string, userId string, tpe string, max int) (bool, error) {
 	// no limit
 	if max == 0 {
@@ -245,19 +350,44 @@ func (c Conn) totpCanAdd(projectId string, userId string, tpe string, max int) (
 	return count < max, nil
 }
 
+func (c Conn) ticketCanAdd(projectId string, max int) (bool, error) {
+	// no limit
+	if max == 0 {
+		return true, nil
+	}
+
+	count, err := sqlite.Scalar[int](c.Conn, `
+		select count(*)
+		from authen_tickets
+		where project_id = ?1
+	`, projectId)
+
+	if err != nil {
+		return false, fmt.Errorf("Sqlite.ticketCanAdd (count) - %w", err)
+	}
+	return count < max, nil
+}
+
 func scanProject(scanner sqlite.Scanner) (*data.Project, error) {
 	var id, totpIssuer string
 	var totpMax, totpSetupTTL, totpSecretLength int
+	var ticketMax, ticketMaxPayloadLength int
 
-	if err := scanner.Scan(&id, &totpIssuer, &totpMax, &totpSetupTTL, &totpSecretLength); err != nil {
+	err := scanner.Scan(&id,
+		&totpIssuer, &totpMax, &totpSetupTTL, &totpSecretLength,
+		&ticketMax, &ticketMaxPayloadLength)
+
+	if err != nil {
 		return nil, err
 	}
 
 	return &data.Project{
-		Id:               id,
-		TOTPMax:          totpMax,
-		TOTPIssuer:       totpIssuer,
-		TOTPSetupTTL:     totpSetupTTL,
-		TOTPSecretLength: totpSecretLength,
+		Id:                     id,
+		TOTPMax:                totpMax,
+		TOTPIssuer:             totpIssuer,
+		TOTPSetupTTL:           totpSetupTTL,
+		TOTPSecretLength:       totpSecretLength,
+		TicketMax:              ticketMax,
+		TicketMaxPayloadLength: ticketMaxPayloadLength,
 	}, nil
 }

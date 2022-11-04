@@ -2,6 +2,10 @@ module src.goblgobl.com/authen
 
 go 1.18
 
+// replace src.goblgobl.com/utils => ../utils
+// replace src.goblgobl.com/tests => ../tests
+// replace src.goblgobl.com/sqlite => ../sqlite
+
 require (
 	github.com/fasthttp/router v1.4.12
 	github.com/jackc/pgx/v5 v5.0.4
@@ -9,7 +13,7 @@ require (
 	github.com/valyala/fasthttp v1.41.0
 	github.com/xlzd/gotp v0.0.0-20220915034741-1546cf172da8
 	src.goblgobl.com/tests v0.0.2
-	src.goblgobl.com/utils v0.0.2
+	src.goblgobl.com/utils v0.0.3
 )
 
 require (
@@ -26,5 +30,5 @@ require (
 	golang.org/x/sync v0.1.0 // indirect
 	golang.org/x/sys v0.1.0 // indirect
 	golang.org/x/text v0.4.0 // indirect
-	src.goblgobl.com/sqlite v0.0.2 // indirect
+	src.goblgobl.com/sqlite v0.0.4 // indirect
 )

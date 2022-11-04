@@ -37,7 +37,14 @@ func Test_Projects_Get_Unknown(t *testing.T) {
 }
 
 func Test_Projects_Get_Known(t *testing.T) {
-	row := tests.Factory.Project.Insert("totp_issuer", "testing.goblgobl.com", "totp_max", 76, "totp_setup_ttl", 277, "totp_secret_length", 19)
+	row := tests.Factory.Project.Insert(
+		"totp_issuer", "testing.goblgobl.com",
+		"totp_max", 76,
+		"totp_setup_ttl", 277,
+		"totp_secret_length", 19,
+		"ticket_max", 49,
+		"ticket_max_payload_length", 149,
+	)
 	id := row.String("id")
 
 	p, err := Projects.Get(id)
@@ -49,4 +56,6 @@ func Test_Projects_Get_Known(t *testing.T) {
 	assert.Nowish(t, time.Unix(int64(p.requestId), 0))
 	assert.Equal(t, string(p.logField.KV()), "pid="+id)
 	assert.Equal(t, p.TOTPIssuer, "testing.goblgobl.com")
+	assert.Equal(t, p.TicketMax, 49)
+	assert.Equal(t, p.TicketMaxPayloadLength, 149)
 }

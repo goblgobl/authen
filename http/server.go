@@ -5,6 +5,7 @@ import (
 	"src.goblgobl.com/authen/codes"
 	"src.goblgobl.com/authen/config"
 	"src.goblgobl.com/authen/http/misc"
+	"src.goblgobl.com/authen/http/tickets"
 	"src.goblgobl.com/authen/http/totps"
 	"src.goblgobl.com/authen/storage/data"
 	"src.goblgobl.com/utils"
@@ -48,7 +49,7 @@ func handler() func(ctx *fasthttp.RequestCtx) {
 
 	envLoader := loadMultiTenancyEnv
 	if !authen.Config.MultiTenancy {
-		envLoader = createSingleTenancyLoader(authen.Config.TOTP)
+		envLoader = createSingleTenancyLoader(authen.Config)
 	}
 
 	// TOTP routes
@@ -56,6 +57,11 @@ func handler() func(ctx *fasthttp.RequestCtx) {
 	r.POST("/v1/totps/verify", http.Handler("totp_verify", envLoader, totps.Verify))
 	r.POST("/v1/totps/delete", http.Handler("totp_delete", envLoader, totps.Delete))
 	r.POST("/v1/totps/change_key", http.Handler("totp_change_key", envLoader, totps.ChangeKey))
+
+	// Tickets routes
+	r.POST("/v1/tickets", http.Handler("tickets_create", envLoader, tickets.Create))
+	r.POST("/v1/tickets/use", http.Handler("tickets_use", envLoader, tickets.Use))
+	r.POST("/v1/tickets/delete", http.Handler("tickets_delete", envLoader, tickets.Delete))
 
 	// catch all
 	r.NotFound = func(ctx *fasthttp.RequestCtx) {
@@ -83,13 +89,17 @@ func loadMultiTenancyEnv(conn *fasthttp.RequestCtx) (*authen.Env, http.Response,
 	return authen.NewEnv(project), nil, nil
 }
 
-func createSingleTenancyLoader(config *config.TOTP) func(conn *fasthttp.RequestCtx) (*authen.Env, http.Response, error) {
+func createSingleTenancyLoader(config config.Config) func(conn *fasthttp.RequestCtx) (*authen.Env, http.Response, error) {
+	totp := config.TOTP
+	ticket := config.Ticket
 	project := authen.NewProject(&data.Project{
-		Id:               "00000000-00000000-00000000-00000000",
-		TOTPMax:          config.Max,
-		TOTPIssuer:       config.Issuer,
-		TOTPSetupTTL:     config.SetupTTL,
-		TOTPSecretLength: config.SecretLength,
+		Id:                     "00000000-00000000-00000000-00000000",
+		TOTPMax:                totp.Max,
+		TOTPIssuer:             totp.Issuer,
+		TOTPSetupTTL:           totp.SetupTTL,
+		TOTPSecretLength:       totp.SecretLength,
+		TicketMax:              ticket.Max,
+		TicketMaxPayloadLength: ticket.MaxPayloadLength,
 	}, false)
 
 	return func(conn *fasthttp.RequestCtx) (*authen.Env, http.Response, error) {
