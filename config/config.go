@@ -10,10 +10,16 @@ import (
 	"src.goblgobl.com/utils/validation"
 )
 
+var (
+	defaultDBCleanFrequency       = uint16(120)
+	defaultProjectUpdateFrequency = uint16(120)
+)
+
 type Config struct {
 	InstanceId             uint8             `json:"instance_id"`
 	Migrations             *bool             `json:"migrations"`
-	DBCleanFrequency       uint16            `json:"db_clean_frequency"`
+	DBCleanFrequency       *uint16           `json:"db_clean_frequency"`
+	ProjectUpdateFrequency *uint16           `json:"project_update_frequency"`
 	MultiTenancy           bool              `json:"multi_tenancy"`
 	HTTP                   HTTP              `json:"http"`
 	TOTP                   *TOTP             `json:"totp"`
@@ -21,7 +27,6 @@ type Config struct {
 	Log                    log.Config        `json:"log"`
 	Storage                storage.Config    `json:"storage"`
 	Validation             validation.Config `json:"validation"`
-	ProjectUpdateFrequency uint16            `json:"project_update_frequency"`
 }
 
 type HTTP struct {
@@ -87,6 +92,14 @@ func Configure(filePath string) (Config, error) {
 	}
 	if !config.MultiTenancy && ticket == nil {
 		config.Ticket = new(Ticket)
+	}
+
+	if config.DBCleanFrequency == nil {
+		config.DBCleanFrequency = &defaultDBCleanFrequency
+	}
+
+	if config.ProjectUpdateFrequency == nil {
+		config.ProjectUpdateFrequency = &defaultProjectUpdateFrequency
 	}
 
 	return config, nil

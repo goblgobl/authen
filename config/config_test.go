@@ -18,21 +18,21 @@ func Test_Config_InvalidJson(t *testing.T) {
 }
 
 func Test_Config_SingleTenancy_NoTOTP(t *testing.T) {
-	_, err := Configure(testConfigPath("minimal_config.json"))
+	_, err := Configure(testConfigPath("totp_issuer_missing_config.json"))
 	assert.Equal(t, err.Error(), "code: 104004 - totp.issuer must be set")
 }
 
 func Test_Config_TOTP_Minimal(t *testing.T) {
-	config, err := Configure(testConfigPath("totp_min_config.json"))
+	config, err := Configure(testConfigPath("minimal_config.json"))
 	assert.Nil(t, err)
 	assert.Equal(t, config.TOTP.Max, 0)
 	assert.Equal(t, config.TOTP.SetupTTL, 300)
 	assert.Equal(t, config.TOTP.SecretLength, 16)
-	assert.Equal(t, config.TOTP.Issuer, "gobl.test")
+	assert.Equal(t, config.TOTP.Issuer, "test.goblgobl.com")
 }
 
 func Test_Config_TOTP(t *testing.T) {
-	config, err := Configure(testConfigPath("totp_config.json"))
+	config, err := Configure(testConfigPath("maximal_config.json"))
 	assert.Nil(t, err)
 	assert.Equal(t, config.TOTP.Max, 92)
 	assert.Equal(t, config.TOTP.SetupTTL, 112)
@@ -41,17 +41,37 @@ func Test_Config_TOTP(t *testing.T) {
 }
 
 func Test_Config_DefaultTicket(t *testing.T) {
-	config, err := Configure(testConfigPath("totp_config.json"))
+	config, err := Configure(testConfigPath("minimal_config.json"))
 	assert.Nil(t, err)
 	assert.Equal(t, config.Ticket.Max, 0)
 	assert.Equal(t, config.Ticket.MaxPayloadLength, 0)
 }
 
 func Test_Config_Ticket(t *testing.T) {
-	config, err := Configure(testConfigPath("ticket_config.json"))
+	config, err := Configure(testConfigPath("maximal_config.json"))
 	assert.Nil(t, err)
 	assert.Equal(t, config.Ticket.Max, 76)
 	assert.Equal(t, config.Ticket.MaxPayloadLength, 877)
+}
+
+func Test_Config_DBCleanFrequency(t *testing.T) {
+	config, err := Configure(testConfigPath("minimal_config.json"))
+	assert.Nil(t, err)
+	assert.Equal(t, *config.DBCleanFrequency, 120)
+
+	config, err = Configure(testConfigPath("maximal_config.json"))
+	assert.Nil(t, err)
+	assert.Equal(t, *config.DBCleanFrequency, 99)
+}
+
+func Test_Config_ProjectUpdateFrequency(t *testing.T) {
+	config, err := Configure(testConfigPath("minimal_config.json"))
+	assert.Nil(t, err)
+	assert.Equal(t, *config.ProjectUpdateFrequency, 120)
+
+	config, err = Configure(testConfigPath("maximal_config.json"))
+	assert.Nil(t, err)
+	assert.Equal(t, *config.ProjectUpdateFrequency, 98)
 }
 
 func testConfigPath(file string) string {

@@ -1,3 +1,4 @@
 {
-	"storage": {"type": "sqlite"}
+	"storage": {"type": "sqlite"},
+	"totp": {"issuer": "test.goblgobl.com"}
 }

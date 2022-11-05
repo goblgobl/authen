@@ -1,0 +1,36 @@
+{
+	"instance_id": 0,
+	"migrations": true,
+	"db_clean_frequency": 99,
+	"project_update_frequency": 98,
+
+	"log": {
+		"level": "info",
+		"pool_size": 100,
+		"format": "kv",
+		"kv": {
+			"max_size": 4096
+		}
+	},
+
+	"http": {
+		"listen": "127.0.0.1:5200"
+	},
+
+	"storage": {
+		"type": "postgres",
+		"url": "postgres://localhost:5432/gobl_authen"
+	},
+
+	"totp": {
+		"max": 92,
+		"setup_ttl": 112,
+		"secret_length": 17,
+		"issuer": "gobl1.test"
+	},
+
+	"ticket": {
+		"max": 76,
+		"max_payload_length": 877
+	}
+}

@@ -15,12 +15,12 @@ func Init(config config.Config) error {
 	rand.Seed(time.Now().UnixNano())
 
 	Config = config
-	if seconds := config.ProjectUpdateFrequency; seconds != 0 {
-		go reloadUpdatedProjects(time.Duration(seconds) * time.Second)
+	if seconds := config.ProjectUpdateFrequency; seconds != nil {
+		go reloadUpdatedProjects(time.Duration(*seconds) * time.Second)
 	}
 
-	if seconds := config.DBCleanFrequency; seconds != 0 {
-		go dbCleaner(time.Duration(seconds) * time.Second)
+	if seconds := config.DBCleanFrequency; seconds != nil {
+		go dbCleaner(time.Duration(*seconds) * time.Second)
 	}
 	return nil
 }
@@ -32,11 +32,12 @@ func Init(config config.Config) error {
 // 0 to disable this behavior and rely on some other mechanism
 func reloadUpdatedProjects(seconds time.Duration) {
 	lastChecked := time.Now()
+	rand.Int31n(int32(seconds.Seconds()))
 	for {
-		time.Sleep(seconds)
 		now := time.Now()
 		updateProjectsUpdatedSince(lastChecked)
 		lastChecked = now
+		time.Sleep(seconds)
 	}
 }
 

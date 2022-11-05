@@ -1,8 +1,0 @@
-{
-	"storage": {"type": "sqlite"},
-	"totp": {"issuer": "gobl.test"},
-	"ticket": {
-		"max": 76,
-		"max_payload_length": 877
-	}
-}
