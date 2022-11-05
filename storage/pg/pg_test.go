@@ -9,6 +9,7 @@ import (
 	"src.goblgobl.com/authen/storage/data"
 	"src.goblgobl.com/tests"
 	"src.goblgobl.com/tests/assert"
+	"src.goblgobl.com/utils/log"
 	"src.goblgobl.com/utils/pg"
 	"src.goblgobl.com/utils/uuid"
 )
@@ -32,13 +33,19 @@ func init() {
 		return
 	}
 
+	err := log.Configure(log.Config{
+		Level: "WARN",
+	})
+	if err != nil {
+		panic(err)
+	}
+
 	url := tests.PG()
 	tpe := tests.StorageType()
 	if tpe == "cockroach" {
 		url = tests.CR()
 	}
 
-	var err error
 	db, err = New(Config{URL: url}, tpe)
 	if err != nil {
 		panic(err)
@@ -50,6 +57,41 @@ func init() {
 
 func Test_Ping(t *testing.T) {
 	assert.Nil(t, db.Ping())
+}
+
+func Test_Clean_Totps(t *testing.T) {
+	db.MustExec("truncate table authen_totps")
+	db.MustExec(`
+		insert into authen_totps (expires, project_id, user_id, type, pending, secret) values
+		(now() - interval '1 second', $1, 'uid1', '', false, ''),
+		(now() - interval '999 second', $1, 'uid2', '', false, ''),
+		(now() + interval '5 second', $1, 'uid3', '', false, ''),
+		(null, $1, 'uid4', '', false, '')
+	`, uuid.String())
+
+	assert.Nil(t, db.Clean())
+	rows, _ := db.RowsToMap("select user_id from authen_totps order by user_id")
+	assert.Equal(t, len(rows), 2)
+	assert.Equal(t, rows[0].String("user_id"), "uid3")
+	assert.Equal(t, rows[1].String("user_id"), "uid4")
+}
+
+func Test_Clean_Tickets(t *testing.T) {
+	db.MustExec("truncate table authen_tickets")
+	db.MustExec(`
+		insert into authen_tickets (expires, uses, project_id, ticket) values
+		(now() - interval '1 second', null, $1, 't1'),
+		(now() - interval '999 second', null,  $1, 't2'),
+		(null, 0, $1, 't3'),
+		(now() + interval '5 second', 1, $1, 't4'),
+		(null, null, $1, 't5')
+	`, uuid.String())
+
+	assert.Nil(t, db.Clean())
+	rows, _ := db.RowsToMap("select ticket from authen_tickets order by ticket")
+	assert.Equal(t, len(rows), 2)
+	assert.Bytes(t, rows[0].Bytes("ticket"), []byte("t4"))
+	assert.Bytes(t, rows[1].Bytes("ticket"), []byte("t5"))
 }
 
 func Test_GetProject_Unknown(t *testing.T) {

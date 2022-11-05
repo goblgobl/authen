@@ -22,5 +22,11 @@ func Migrate_0002(conn sqlite.Conn) error {
 		return fmt.Errorf("sqlite 0002 authen_totps - %w", err)
 	}
 
+	if err := conn.Exec(`
+		create index authen_totps_expires on authen_totps(expires) where expires is not null
+	`); err != nil {
+		return fmt.Errorf("sqlite 0002 migration authen_totps_expires - %w", err)
+	}
+
 	return nil
 }

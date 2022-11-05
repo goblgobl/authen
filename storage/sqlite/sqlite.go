@@ -37,6 +37,26 @@ func (c Conn) EnsureMigrations() error {
 	return migrations.Run(c.Conn)
 }
 
+func (c Conn) Clean() error {
+	err := c.Exec(`
+		delete from authen_totps
+		where expires < unixepoch()
+	`)
+	if err != nil {
+		return fmt.Errorf("Sqlite.clean (totp) - %w", err)
+	}
+
+	err = c.Exec(`
+		delete from authen_tickets
+		where uses = 0 or expires < unixepoch()
+	`)
+	if err != nil {
+		return fmt.Errorf("Sqlite.clean (tickets) - %w", err)
+	}
+
+	return nil
+}
+
 func (c Conn) Info() (any, error) {
 	migration, err := sqlite.GetCurrentMigrationVersion(c.Conn)
 	if err != nil {

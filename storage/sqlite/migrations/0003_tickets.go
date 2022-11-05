@@ -21,5 +21,17 @@ func Migrate_0003(conn sqlite.Conn) error {
 		return fmt.Errorf("sqlite 0003 authen_tickets - %w", err)
 	}
 
+	if err := conn.Exec(`
+		create index authen_tickets_expires on authen_tickets(expires) where expires is not null
+	`); err != nil {
+		return fmt.Errorf("sqlite 0003 migration authen_tickets_expires - %w", err)
+	}
+
+	if err := conn.Exec(`
+		create index authen_tickets_uses on authen_tickets(uses) where uses is not null
+	`); err != nil {
+		return fmt.Errorf("sqlite 0003 migration authen_tickets_uses - %w", err)
+	}
+
 	return nil
 }

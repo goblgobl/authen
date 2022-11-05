@@ -1,5 +1,5 @@
 # Authentication Enhancement
-A service for adding 2FA to an existing authentication flow.  See the [documentation](https://www.goblgobl.com/docs/authen) for more information on what it does and how to use it.
+A service for adding 2FA and tickets to an existing authentication flow.  See the [documentation](https://www.goblgobl.com/docs/authen) for more information on what it does and how to use it.
 
 ## Development
 Requires Go (1.18+), PostgreSQL and CockroachDB. Use `make t` to run all tests. We don't use Docker because its startup/teardown time is noticeable enough to be annoying when quickly iterating (though of course, you can use what you want). 

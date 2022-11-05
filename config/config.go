@@ -13,6 +13,7 @@ import (
 type Config struct {
 	InstanceId             uint8             `json:"instance_id"`
 	Migrations             *bool             `json:"migrations"`
+	DBCleanFrequency       uint16            `json:"db_clean_frequency"`
 	MultiTenancy           bool              `json:"multi_tenancy"`
 	HTTP                   HTTP              `json:"http"`
 	TOTP                   *TOTP             `json:"totp"`

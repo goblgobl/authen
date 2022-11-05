@@ -28,6 +28,43 @@ func Test_Ping(t *testing.T) {
 	})
 }
 
+func Test_Clean_Totps(t *testing.T) {
+	withTestDB(func(conn Conn) {
+		conn.MustExec(`
+			insert into authen_totps (expires, project_id, user_id, type, pending, secret) values
+			(unixepoch() - 1, ?1, 'uid1', '', false, ''),
+			(unixepoch() - 999, ?1, 'uid2', '', false, ''),
+			(unixepoch() + 5, ?1, 'uid3', '', false, ''),
+			(null, ?1, 'uid4', '', false, '')
+		`, uuid.String())
+
+		assert.Nil(t, conn.Clean())
+		rows, _ := conn.RowsToMap("select user_id from authen_totps order by user_id")
+		assert.Equal(t, len(rows), 2)
+		assert.Equal(t, rows[0].String("user_id"), "uid3")
+		assert.Equal(t, rows[1].String("user_id"), "uid4")
+	})
+}
+
+func Test_Clean_Tickets(t *testing.T) {
+	withTestDB(func(conn Conn) {
+		conn.MustExec(`
+			insert into authen_tickets (expires, uses, project_id, ticket) values
+			(unixepoch() - 1, null, ?1, 't1'),
+			(unixepoch() - 999, null, ?1, 't2'),
+			(null, 0, ?1, 't3'),
+			(unixepoch() + 5, 1, ?1, 't4'),
+			(null, null, ?1, 't5')
+		`, uuid.String())
+
+		assert.Nil(t, conn.Clean())
+		rows, _ := conn.RowsToMap("select ticket from authen_tickets order by ticket")
+		assert.Equal(t, len(rows), 2)
+		assert.Bytes(t, rows[0].Bytes("ticket"), []byte("t4"))
+		assert.Bytes(t, rows[1].Bytes("ticket"), []byte("t5"))
+	})
+}
+
 func Test_GetProject_Unknown(t *testing.T) {
 	withTestDB(func(conn Conn) {
 		p, err := conn.GetProject("unknown")

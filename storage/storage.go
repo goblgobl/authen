@@ -21,6 +21,9 @@ type Storage interface {
 	// return information about the storage
 	Info() (any, error)
 
+	// clean any data that needs cleaning
+	Clean() error
+
 	EnsureMigrations() error
 
 	GetProject(id string) (*data.Project, error)

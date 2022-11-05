@@ -38,6 +38,26 @@ func (db DB) Ping() error {
 	return nil
 }
 
+func (db DB) Clean() error {
+	_, err := db.Exec(context.Background(), `
+		delete from authen_totps
+		where expires < now()
+	`)
+	if err != nil {
+		return fmt.Errorf("PG.clean (totp) - %w", err)
+	}
+
+	_, err = db.Exec(context.Background(), `
+		delete from authen_tickets
+		where uses = 0 or expires < now()
+	`)
+	if err != nil {
+		return fmt.Errorf("PG.clean (tickets) - %w", err)
+	}
+
+	return nil
+}
+
 func (db DB) EnsureMigrations() error {
 	return migrations.Run(db.DB)
 }
