@@ -9,6 +9,7 @@ func Run(db pg.DB) error {
 		pg.Migration{1, Migrate_0001},
 		pg.Migration{2, Migrate_0002},
 		pg.Migration{3, Migrate_0003},
+		pg.Migration{4, Migrate_0004},
 	}
 	return pg.MigrateAll(db, "authen", migrations)
 }

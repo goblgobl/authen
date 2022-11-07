@@ -4,6 +4,7 @@ import (
 	"src.goblgobl.com/authen"
 	"src.goblgobl.com/authen/codes"
 	"src.goblgobl.com/authen/config"
+	"src.goblgobl.com/authen/http/loginLogs"
 	"src.goblgobl.com/authen/http/misc"
 	"src.goblgobl.com/authen/http/tickets"
 	"src.goblgobl.com/authen/http/totps"
@@ -62,6 +63,9 @@ func handler() func(ctx *fasthttp.RequestCtx) {
 	r.POST("/v1/tickets", http.Handler("tickets_create", envLoader, tickets.Create))
 	r.POST("/v1/tickets/use", http.Handler("tickets_use", envLoader, tickets.Use))
 	r.POST("/v1/tickets/delete", http.Handler("tickets_delete", envLoader, tickets.Delete))
+
+	r.GET("/v1/login_logs", http.Handler("login_logs_list", envLoader, loginLogs.List))
+	r.POST("/v1/login_logs", http.Handler("login_logs_create", envLoader, loginLogs.Create))
 
 	// catch all
 	r.NotFound = func(ctx *fasthttp.RequestCtx) {

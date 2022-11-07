@@ -36,6 +36,9 @@ type Storage interface {
 	TicketUse(opts data.TicketUse) (data.TicketUseResult, error)
 	TicketDelete(opts data.TicketUse) (data.TicketUseResult, error)
 	TicketCreate(opts data.TicketCreate) (data.TicketCreateResult, error)
+
+	LoginLogGet(opts data.LoginLogGet) (data.LoginLogGetResult, error)
+	LoginLogCreate(opts data.LoginLogCreate) (data.LoginLogCreateResult, error)
 }
 
 func Configure(config Config) (err error) {

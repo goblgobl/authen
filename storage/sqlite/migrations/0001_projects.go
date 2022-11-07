@@ -17,6 +17,8 @@ func Migrate_0001(conn sqlite.Conn) error {
 			totp_secret_length int not null,
 			ticket_max int not null,
 			ticket_max_payload_length int not null,
+			login_log_max int not null,
+			login_log_max_meta_length int not null,
 			created int not null default(unixepoch()),
 			updated int not null default(unixepoch())
 	)`)

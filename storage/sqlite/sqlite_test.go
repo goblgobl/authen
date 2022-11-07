@@ -76,8 +76,8 @@ func Test_GetProject_Unknown(t *testing.T) {
 func Test_GetProject_Success(t *testing.T) {
 	withTestDB(func(conn Conn) {
 		conn.MustExec(`
-			insert into authen_projects (id, totp_issuer, totp_max, totp_setup_ttl, totp_secret_length, ticket_max, ticket_max_payload_length)
-			values ('p1', 'is1', 93, 121, 39, 49, 1021)
+			insert into authen_projects (id, totp_issuer, totp_max, totp_setup_ttl, totp_secret_length, ticket_max, ticket_max_payload_length, login_log_max, login_log_max_meta_length)
+			values ('p1', 'is1', 93, 121, 39, 49, 1021, 59, 1029)
 		`)
 		p, err := conn.GetProject("p1")
 		assert.Nil(t, err)
@@ -88,14 +88,16 @@ func Test_GetProject_Success(t *testing.T) {
 		assert.Equal(t, p.TOTPSetupTTL, 121)
 		assert.Equal(t, p.TicketMax, 49)
 		assert.Equal(t, p.TicketMaxPayloadLength, 1021)
+		assert.Equal(t, p.LoginLogMax, 59)
+		assert.Equal(t, p.LoginLogMaxMetaLength, 1029)
 	})
 }
 
 func Test_GetUpdatedProjects_None(t *testing.T) {
 	withTestDB(func(conn Conn) {
 		conn.MustExec(`
-			insert into authen_projects (id, updated, totp_issuer, totp_max, totp_setup_ttl, totp_secret_length, ticket_max, ticket_max_payload_length)
-			values ('p1', 0, '', 0, 0, 0, 0, 0)
+			insert into authen_projects (id, updated, totp_issuer, totp_max, totp_setup_ttl, totp_secret_length, ticket_max, ticket_max_payload_length, login_log_max, login_log_max_meta_length)
+			values ('p1', 0, '', 0, 0, 0, 0, 0, 0, 0)
 		`)
 		updated, err := conn.GetUpdatedProjects(time.Now())
 		assert.Nil(t, err)
@@ -106,11 +108,11 @@ func Test_GetUpdatedProjects_None(t *testing.T) {
 func Test_GetUpdatedProjects_Success(t *testing.T) {
 	withTestDB(func(conn Conn) {
 		conn.MustExec(`
-			insert into authen_projects (id, updated, totp_issuer, totp_max, totp_setup_ttl, totp_secret_length, ticket_max, ticket_max_payload_length) values
-			('p1', unixepoch() - 500, '', 0, 0, 0, 0, 0),
-			('p2', unixepoch() - 200, '', 0, 0, 0, 0, 0),
-			('p3', unixepoch() - 100, '', 0, 0, 0, 0, 0),
-			('p4', unixepoch() - 10, '', 0, 0, 0, 0, 0)
+			insert into authen_projects (id, updated, totp_issuer, totp_max, totp_setup_ttl, totp_secret_length, ticket_max, ticket_max_payload_length, login_log_max, login_log_max_meta_length) values
+			('p1', unixepoch() - 500, '', 0, 0, 0, 0, 0, 0, 0),
+			('p2', unixepoch() - 200, '', 0, 0, 0, 0, 0, 0, 0),
+			('p3', unixepoch() - 100, '', 0, 0, 0, 0, 0, 0, 0),
+			('p4', unixepoch() - 10, '', 0, 0, 0, 0, 0, 0, 0)
 		`)
 		updated, err := conn.GetUpdatedProjects(time.Now().Add(time.Second * -105))
 		assert.Nil(t, err)
@@ -649,6 +651,127 @@ func Test_TicketDelete(t *testing.T) {
 				ProjectId: "p1",
 				Ticket:    []byte("t2"),
 			}, -2)
+		}
+	})
+}
+
+func Test_LoginLogCreate(t *testing.T) {
+	withTestDB(func(conn Conn) {
+		assertLoginLog := func(opts data.LoginLogCreate) {
+			t.Helper()
+			res, err := conn.LoginLogCreate(opts)
+			assert.Nil(t, err)
+			assert.Equal(t, res.Status, data.LOGIN_LOG_CREATE_OK)
+
+			row, _ := conn.RowToMap("select * from authen_login_logs where id = $1", opts.Id)
+			assert.Nowish(t, row.Time("created"))
+			assert.Equal(t, row.Int("status"), opts.Status)
+			assert.Equal(t, row.String("user_id"), opts.UserId)
+			assert.Equal(t, row.String("project_id"), opts.ProjectId)
+
+			if opts.Meta == nil {
+				assert.Nil(t, row["meta"])
+			} else {
+				assert.Bytes(t, row.Bytes("meta"), opts.Meta)
+			}
+		}
+
+		//no meta
+		{
+			assertLoginLog(data.LoginLogCreate{
+				Id:        "l1",
+				Status:    99,
+				UserId:    "u1",
+				ProjectId: uuid.String(),
+			})
+		}
+
+		//meta
+		{
+			assertLoginLog(data.LoginLogCreate{
+				Id:        "l2",
+				Status:    2,
+				UserId:    "u2",
+				ProjectId: uuid.String(),
+				Meta:      []byte("over 9000!"),
+			})
+		}
+	})
+}
+
+func Test_LoginLogGet(t *testing.T) {
+	assertRecord := func(actual data.LoginLogRecord, id string, status int, metaName string) {
+		t.Helper()
+		assert.Equal(t, actual.Id, id)
+		assert.Equal(t, actual.Status, status)
+		if metaName == "" {
+			assert.Nil(t, actual.Meta)
+		} else {
+			meta := (actual.Meta).(map[string]any)
+			assert.Equal(t, meta["name"].(string), metaName)
+		}
+	}
+
+	withTestDB(func(conn Conn) {
+		// empty result
+		{
+			res, err := conn.LoginLogGet(data.LoginLogGet{})
+			assert.Nil(t, err)
+			assert.Equal(t, res.Status, data.LOGIN_LOG_GET_OK)
+			assert.Equal(t, len(res.Records), 0)
+		}
+
+		conn.MustExec(`
+			insert into authen_login_logs (id, project_id, user_id, status, meta, created) values
+			('id1', 'p1', 'u1', 1, null, unixepoch() - 100),
+			('id2', 'p1', 'u1', 2, '{"name": "idaho"}', unixepoch() - 110),
+			('id3', 'p1', 'u1', 3, null, unixepoch() - 120),
+			('id4', 'p1', 'u1', 4, '{"name": "ghanima"}', unixepoch() - 130),
+			('id5', 'p1', 'u2', 1, null, unixepoch()),
+			('id6', 'p2', 'u1', 1, null, unixepoch());
+		`)
+
+		// first page
+		{
+			res, err := conn.LoginLogGet(data.LoginLogGet{
+				Limit:     2,
+				Offset:    0,
+				UserId:    "u1",
+				ProjectId: "p1",
+			})
+			assert.Nil(t, err)
+			assert.Equal(t, res.Status, data.LOGIN_LOG_GET_OK)
+			assert.Equal(t, len(res.Records), 2)
+			assertRecord(res.Records[0], "id1", 1, "")
+			assertRecord(res.Records[1], "id2", 2, "idaho")
+		}
+
+		// 2nd page
+		{
+			res, err := conn.LoginLogGet(data.LoginLogGet{
+				Limit:     2,
+				Offset:    2,
+				UserId:    "u1",
+				ProjectId: "p1",
+			})
+			assert.Nil(t, err)
+			assert.Equal(t, res.Status, data.LOGIN_LOG_GET_OK)
+			assert.Equal(t, len(res.Records), 2)
+			assertRecord(res.Records[0], "id3", 3, "")
+			assertRecord(res.Records[1], "id4", 4, "ghanima")
+		}
+
+		// Empty page
+		{
+			res, err := conn.LoginLogGet(data.LoginLogGet{
+				Limit:     4,
+				Offset:    4,
+				UserId:    "u1",
+				ProjectId: "p1",
+			})
+			assert.Nil(t, err)
+			assert.Equal(t, res.Status, data.LOGIN_LOG_GET_OK)
+			assert.Equal(t, len(res.Records), 0)
 		}
 	})
 }

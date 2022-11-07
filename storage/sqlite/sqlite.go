@@ -1,11 +1,13 @@
 package sqlite
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
 
 	"src.goblgobl.com/authen/storage/data"
 	"src.goblgobl.com/authen/storage/sqlite/migrations"
+	"src.goblgobl.com/utils/log"
 	"src.goblgobl.com/utils/sqlite"
 )
 
@@ -76,7 +78,8 @@ func (c Conn) GetProject(id string) (*data.Project, error) {
 	row := c.Row(`
 		select id,
 			totp_issuer, totp_max, totp_setup_ttl, totp_secret_length,
-			ticket_max, ticket_max_payload_length
+			ticket_max, ticket_max_payload_length,
+			login_log_max, login_log_max_meta_length
 		from authen_projects
 		where id = ?1
 	`, id)
@@ -107,7 +110,8 @@ func (c Conn) GetUpdatedProjects(timestamp time.Time) ([]*data.Project, error) {
 	rows := c.Rows(`
 		select id,
 			totp_issuer, totp_max, totp_setup_ttl, totp_secret_length,
-			ticket_max, ticket_max_payload_length
+			ticket_max, ticket_max_payload_length,
+			login_log_max, login_log_max_meta_length
 		from authen_projects
 		where updated > ?1
 	`, timestamp)
@@ -334,6 +338,90 @@ func (c Conn) TicketDelete(opts data.TicketUse) (data.TicketUseResult, error) {
 	return result, nil
 }
 
+func (c Conn) LoginLogCreate(opts data.LoginLogCreate) (data.LoginLogCreateResult, error) {
+	id := opts.Id
+	max := opts.Max
+	meta := opts.Meta
+	userId := opts.UserId
+	status := opts.Status
+	projectId := opts.ProjectId
+
+	var result data.LoginLogCreateResult
+
+	canAdd, err := c.loginLogCanAdd(projectId, max)
+	if err != nil {
+		return result, err
+	}
+
+	if !canAdd {
+		result.Status = data.LOGIN_LOG_CREATE_MAX
+		return result, nil
+	}
+
+	err = c.Exec(`
+		insert into authen_login_logs (id, project_id, user_id, status, meta)
+		values (?1, ?2, ?3, ?4, ?5)
+	`, id, projectId, userId, status, meta)
+
+	if err != nil {
+		return result, fmt.Errorf("Sqlite.LoginLogCreate - %w", err)
+	}
+
+	result.Status = data.LOGIN_LOG_CREATE_OK
+	return result, nil
+}
+
+func (c Conn) LoginLogGet(opts data.LoginLogGet) (data.LoginLogGetResult, error) {
+	userId := opts.UserId
+	projectId := opts.ProjectId
+	limit := opts.Limit
+	offset := opts.Offset
+
+	var result data.LoginLogGetResult
+
+	rows := c.Rows(`
+		select id, status, meta, created
+		from authen_login_logs
+		where project_id = ?1 and user_id = ?2
+		order by created desc
+		limit ?3 offset ?4
+	`, projectId, userId, limit, offset)
+
+	if err := rows.Error(); err != nil {
+		return result, fmt.Errorf("Sqlite.LoginLogGet (select) - %w", err)
+	}
+	defer rows.Close()
+
+	i := 0
+	records := make([]data.LoginLogRecord, limit)
+	for rows.Next() {
+		var meta any
+		var metaBytes *[]byte
+		var record data.LoginLogRecord
+
+		rows.Scan(&record.Id, &record.Status, &metaBytes, &record.Created)
+		if metaBytes != nil {
+			//rather not do this here, but it's better for our handler, so...
+			if err := json.Unmarshal(*metaBytes, &meta); err != nil {
+				// very weird, as we've been able to deal with this as json so far
+				log.Error("login_record_meta").Err(err).String("meta", string(*metaBytes)).Log()
+			}
+			record.Meta = meta
+		}
+
+		records[i] = record
+		i += 1
+	}
+
+	if err := rows.Error(); err != nil {
+		return result, fmt.Errorf("Sqlite.LoginLogGet (scan) - %w", err)
+	}
+
+	result.Records = records[:i]
+	result.Status = data.LOGIN_LOG_GET_OK
+	return result, nil
+}
+
 func (c Conn) totpCanAdd(projectId string, userId string, tpe string, max int) (bool, error) {
 	// no limit
 	if max == 0 {
@@ -388,14 +476,34 @@ func (c Conn) ticketCanAdd(projectId string, max int) (bool, error) {
 	return count < max, nil
 }
 
+func (c Conn) loginLogCanAdd(projectId string, max int) (bool, error) {
+	// no limit
+	if max == 0 {
+		return true, nil
+	}
+
+	count, err := sqlite.Scalar[int](c.Conn, `
+		select count(*)
+		from authen_login_logs
+		where project_id = ?1
+	`, projectId)
+
+	if err != nil {
+		return false, fmt.Errorf("Sqlite.loginLogCanAdd (count) - %w", err)
+	}
+	return count < max, nil
+}
+
 func scanProject(scanner sqlite.Scanner) (*data.Project, error) {
 	var id, totpIssuer string
 	var totpMax, totpSetupTTL, totpSecretLength int
 	var ticketMax, ticketMaxPayloadLength int
+	var loginLogMax, loginLogMaxMetaLength int
 
 	err := scanner.Scan(&id,
 		&totpIssuer, &totpMax, &totpSetupTTL, &totpSecretLength,
-		&ticketMax, &ticketMaxPayloadLength)
+		&ticketMax, &ticketMaxPayloadLength,
+		&loginLogMax, &loginLogMaxMetaLength)
 
 	if err != nil {
 		return nil, err
@@ -409,5 +517,7 @@ func scanProject(scanner sqlite.Scanner) (*data.Project, error) {
 		TOTPSecretLength:       totpSecretLength,
 		TicketMax:              ticketMax,
 		TicketMaxPayloadLength: ticketMaxPayloadLength,
+		LoginLogMax:            loginLogMax,
+		LoginLogMaxMetaLength:  loginLogMaxMetaLength,
 	}, nil
 }

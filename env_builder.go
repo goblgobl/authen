@@ -50,6 +50,16 @@ func (eb *EnvBuilder) TicketMaxPayloadLength(max int) *EnvBuilder {
 	return eb
 }
 
+func (eb *EnvBuilder) LoginLogMax(max int) *EnvBuilder {
+	eb.project.LoginLogMax = max
+	return eb
+}
+
+func (eb *EnvBuilder) LoginLogMaxMetaLength(max int) *EnvBuilder {
+	eb.project.LoginLogMaxMetaLength = max
+	return eb
+}
+
 func (eb *EnvBuilder) Env() *Env {
 	project := eb.project
 	if project == nil {

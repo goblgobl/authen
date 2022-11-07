@@ -8,4 +8,6 @@ type Project struct {
 	TOTPSecretLength       int    `json:"totp_secret_length"`
 	TicketMax              int    `json:"ticket_max"`
 	TicketMaxPayloadLength int    `json:"ticket_max_payload_length"`
+	LoginLogMax            int    `json:"login_log_max"`
+	LoginLogMaxMetaLength  int    `json:"login_log_max_meta_length"`
 }

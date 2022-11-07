@@ -34,6 +34,8 @@ type Project struct {
 	TOTPSecretLength       int           `json:"totp_secret_length"`
 	TicketMax              int           `json:"ticket_max"`
 	TicketMaxPayloadLength int           `json:"ticket_max_payload_length"`
+	LoginLogMax            int           `json:"login_log_max"`
+	LoginLogMaxMetaLength  int           `json:"login_log_max_meta_length"`
 }
 
 func (p *Project) NextRequestId() string {
@@ -67,6 +69,8 @@ func NewProject(projectData *data.Project, logProjectId bool) *Project {
 		TOTPSecretLength:       projectData.TOTPSecretLength,
 		TicketMax:              projectData.TicketMax,
 		TicketMaxPayloadLength: projectData.TicketMaxPayloadLength,
+		LoginLogMax:            projectData.LoginLogMax,
+		LoginLogMaxMetaLength:  projectData.LoginLogMaxMetaLength,
 
 		// If we let this start at 0, then restarts are likely to produce duplicates.
 		// While we make no guarantees about the uniqueness of the requestId, there's

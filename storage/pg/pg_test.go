@@ -104,8 +104,8 @@ func Test_GetProject_Success(t *testing.T) {
 	id := uuid.String()
 	db.MustExec("truncate table authen_projects")
 	db.MustExec(`
-		insert into authen_projects (id, totp_issuer, totp_max, totp_setup_ttl, totp_secret_length, ticket_max, ticket_max_payload_length)
-		values ($1, 'goblgobl.com', 84, 124, 38, 49, 1022)
+		insert into authen_projects (id, totp_issuer, totp_max, totp_setup_ttl, totp_secret_length, ticket_max, ticket_max_payload_length, login_log_max, login_log_max_meta_length)
+		values ($1, 'goblgobl.com', 84, 124, 38, 49, 1022, 59, 1029)
 	`, id)
 
 	p, err := db.GetProject(id)
@@ -117,14 +117,16 @@ func Test_GetProject_Success(t *testing.T) {
 	assert.Equal(t, p.TOTPIssuer, "goblgobl.com")
 	assert.Equal(t, p.TicketMax, 49)
 	assert.Equal(t, p.TicketMaxPayloadLength, 1022)
+	assert.Equal(t, p.LoginLogMax, 59)
+	assert.Equal(t, p.LoginLogMaxMetaLength, 1029)
 }
 
 func Test_GetUpdatedProjects_None(t *testing.T) {
 	id := uuid.String()
 	db.MustExec("truncate table authen_projects")
 	db.MustExec(`
-		insert into authen_projects (id, updated, totp_issuer, totp_max, totp_setup_ttl, totp_secret_length, ticket_max, ticket_max_payload_length)
-		values ($1, now() - interval '1 second', '', 0, 0, 0, 0, 0)
+		insert into authen_projects (id, updated, totp_issuer, totp_max, totp_setup_ttl, totp_secret_length, ticket_max, ticket_max_payload_length, login_log_max, login_log_max_meta_length)
+		values ($1, now() - interval '1 second', '', 0, 0, 0, 0, 0, 0, 0)
 	`, id)
 	updated, err := db.GetUpdatedProjects(time.Now())
 	assert.Nil(t, err)
@@ -135,11 +137,11 @@ func Test_GetUpdatedProjects_Success(t *testing.T) {
 	id1, id2, id3, id4 := uuid.String(), uuid.String(), uuid.String(), uuid.String()
 	db.MustExec("truncate table authen_projects")
 	db.MustExec(`
-		insert into authen_projects (id, updated, totp_issuer, totp_max, totp_setup_ttl, totp_secret_length, ticket_max, ticket_max_payload_length) values
-		($1, now() - interval '500 second', '', 0, 0, 0, 0, 0),
-		($2, now() - interval '200 second', '', 0, 0, 0, 0, 0),
-		($3, now() - interval '100 second', '', 0, 0, 0, 0, 0),
-		($4, now() - interval '10 second', '', 0, 0, 0, 0, 0)
+		insert into authen_projects (id, updated, totp_issuer, totp_max, totp_setup_ttl, totp_secret_length, ticket_max, ticket_max_payload_length, login_log_max, login_log_max_meta_length) values
+		($1, now() - interval '500 second', '', 0, 0, 0, 0, 0, 0, 0),
+		($2, now() - interval '200 second', '', 0, 0, 0, 0, 0, 0, 0),
+		($3, now() - interval '100 second', '', 0, 0, 0, 0, 0, 0, 0),
+		($4, now() - interval '10 second', '', 0, 0, 0, 0, 0, 0, 0)
 	`, id1, id2, id3, id4)
 	updated, err := db.GetUpdatedProjects(time.Now().Add(time.Second * -105))
 	assert.Nil(t, err)
@@ -672,5 +674,128 @@ func Test_TicketDelete(t *testing.T) {
 			ProjectId: "p1",
 			Ticket:    []byte("t2"),
 		}, -2)
+	}
+}
+
+func Test_LoginLogCreate(t *testing.T) {
+	assertLoginLog := func(opts data.LoginLogCreate) {
+		t.Helper()
+		res, err := db.LoginLogCreate(opts)
+		assert.Nil(t, err)
+		assert.Equal(t, res.Status, data.LOGIN_LOG_CREATE_OK)
+
+		row, _ := db.RowToMap("select * from authen_login_logs where id = $1", opts.Id)
+		assert.Nowish(t, row.Time("created"))
+		assert.Equal(t, row.Int("status"), opts.Status)
+		assert.Equal(t, row.String("user_id"), opts.UserId)
+		assert.Equal(t, row.String("project_id"), opts.ProjectId)
+
+		if opts.Meta == nil {
+			assert.Nil(t, row["meta"])
+		} else {
+			assert.Bytes(t, row.Bytes("meta"), opts.Meta)
+		}
+	}
+
+	//no meta
+	{
+		assertLoginLog(data.LoginLogCreate{
+			Id:        uuid.String(),
+			Status:    99,
+			UserId:    "u1",
+			ProjectId: uuid.String(),
+		})
+	}
+
+	//meta
+	{
+		assertLoginLog(data.LoginLogCreate{
+			Id:        uuid.String(),
+			Status:    2,
+			UserId:    "u2",
+			ProjectId: uuid.String(),
+			Meta:      []byte("over 9000!"),
+		})
+	}
+}
+
+func Test_LoginLogGet(t *testing.T) {
+	assertRecord := func(actual data.LoginLogRecord, id string, status int, metaName string) {
+		t.Helper()
+		assert.Equal(t, actual.Id, id)
+		assert.Equal(t, actual.Status, status)
+		if metaName == "" {
+			assert.Nil(t, actual.Meta)
+		} else {
+			meta := (actual.Meta).(map[string]any)
+			assert.Equal(t, meta["name"].(string), metaName)
+		}
+	}
+
+	// empty result
+	{
+		res, err := db.LoginLogGet(data.LoginLogGet{
+			ProjectId: uuid.String(),
+		})
+
+		assert.Nil(t, err)
+		assert.Equal(t, res.Status, data.LOGIN_LOG_GET_OK)
+		assert.Equal(t, len(res.Records), 0)
+	}
+
+	projectId1, projectId2 := uuid.String(), uuid.String()
+	id1, id2, id3 := uuid.String(), uuid.String(), uuid.String()
+	id4, id5, id6 := uuid.String(), uuid.String(), uuid.String()
+	db.MustExec(`
+		insert into authen_login_logs (id, project_id, user_id, status, meta, created) values
+		($1, $7, 'u1', 1, null, now() - interval '100 seconds'),
+		($2, $7, 'u1', 2, '{"name": "idaho"}', now() - interval '110 seconds'),
+		($3, $7, 'u1', 3, null, now() - interval '120 seconds'),
+		($4, $7, 'u1', 4, '{"name": "ghanima"}', now() - interval '130 seconds'),
+		($5, $7, 'u2', 1, null, now()),
+		($6, $8, 'u1', 1, null, now());
+	`, id1, id2, id3, id4, id5, id6, projectId1, projectId2)
+
+	// first page
+	{
+		res, err := db.LoginLogGet(data.LoginLogGet{
+			Limit:     2,
+			Offset:    0,
+			UserId:    "u1",
+			ProjectId: projectId1,
+		})
+		assert.Nil(t, err)
+		assert.Equal(t, res.Status, data.LOGIN_LOG_GET_OK)
+		assert.Equal(t, len(res.Records), 2)
+		assertRecord(res.Records[0], id1, 1, "")
+		assertRecord(res.Records[1], id2, 2, "idaho")
+	}
+
+	// 2nd page
+	{
+		res, err := db.LoginLogGet(data.LoginLogGet{
+			Limit:     2,
+			Offset:    2,
+			UserId:    "u1",
+			ProjectId: projectId1,
+		})
+		assert.Nil(t, err)
+		assert.Equal(t, res.Status, data.LOGIN_LOG_GET_OK)
+		assert.Equal(t, len(res.Records), 2)
+		assertRecord(res.Records[0], id3, 3, "")
+		assertRecord(res.Records[1], id4, 4, "ghanima")
+	}
+
+	// Empty page
+	{
+		res, err := db.LoginLogGet(data.LoginLogGet{
+			Limit:     4,
+			Offset:    4,
+			UserId:    "u1",
+			ProjectId: projectId1,
+		})
+		assert.Nil(t, err)
+		assert.Equal(t, res.Status, data.LOGIN_LOG_GET_OK)
+		assert.Equal(t, len(res.Records), 0)
 	}
 }

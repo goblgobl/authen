@@ -14,9 +14,10 @@ import (
 )
 
 type factory struct {
-	Project f.Table
-	TOTP    f.Table
-	Ticket  f.Table
+	Project  f.Table
+	TOTP     f.Table
+	Ticket   f.Table
+	LoginLog f.Table
 }
 
 var (
@@ -37,6 +38,8 @@ func init() {
 			"totp_secret_length":        args.Int("totp_secret_length", 32),
 			"ticket_max":                args.Int("ticket_max", 100),
 			"ticket_max_payload_length": args.Int("ticket_max_payload_length", 128),
+			"login_log_max":             args.Int("login_log_max", 100),
+			"login_log_max_meta_length": args.Int("login_log_max_meta_length", 128),
 			"created":                   args.Time("created", time.Now()),
 			"updated":                   args.Time("updated", time.Now()),
 		}
@@ -95,6 +98,26 @@ func init() {
 			"expires":    args.Time("expires"),
 			"uses":       args.Int("uses"),
 			"payload":    payload,
+			"created":    args.Time("created", time.Now()),
+		}
+	})
+
+	Factory.LoginLog = f.NewTable("authen_login_logs", func(args f.KV) f.KV {
+		var meta *[]byte
+		if m, ok := args["meta"]; ok {
+			m, err := json.Marshal(m)
+			if err != nil {
+				panic(err)
+			}
+			meta = &m
+		}
+
+		return f.KV{
+			"id":         args.UUID("id", uuid.String()),
+			"project_id": args.UUID("project_id", uuid.String()),
+			"user_id":    args.String("user_id", uuid.String()),
+			"status":     args.Int("status", 0),
+			"meta":       meta,
 			"created":    args.Time("created", time.Now()),
 		}
 	})
