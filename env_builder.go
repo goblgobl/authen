@@ -55,8 +55,8 @@ func (eb *EnvBuilder) LoginLogMax(max int) *EnvBuilder {
 	return eb
 }
 
-func (eb *EnvBuilder) LoginLogMaxMetaLength(max int) *EnvBuilder {
-	eb.project.LoginLogMaxMetaLength = max
+func (eb *EnvBuilder) LoginLogMaxPayloadLength(max int) *EnvBuilder {
+	eb.project.LoginLogMaxPayloadLength = max
 	return eb
 }
 

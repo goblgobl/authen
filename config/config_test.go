@@ -54,6 +54,20 @@ func Test_Config_Ticket(t *testing.T) {
 	assert.Equal(t, config.Ticket.MaxPayloadLength, 877)
 }
 
+func Test_Config_DefaultLoginLog(t *testing.T) {
+	config, err := Configure(testConfigPath("minimal_config.json"))
+	assert.Nil(t, err)
+	assert.Equal(t, config.LoginLog.Max, 0)
+	assert.Equal(t, config.LoginLog.MaxPayloadLength, 0)
+}
+
+func Test_Config_LoginLog(t *testing.T) {
+	config, err := Configure(testConfigPath("maximal_config.json"))
+	assert.Nil(t, err)
+	assert.Equal(t, config.LoginLog.Max, 11)
+	assert.Equal(t, config.LoginLog.MaxPayloadLength, 92)
+}
+
 func Test_Config_DBCleanFrequency(t *testing.T) {
 	config, err := Configure(testConfigPath("minimal_config.json"))
 	assert.Nil(t, err)

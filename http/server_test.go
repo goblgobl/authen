@@ -134,6 +134,10 @@ func Test_Server_SingleTenancy_CallsHandlerWithProject(t *testing.T) {
 			Max:              99,
 			MaxPayloadLength: 177,
 		},
+		LoginLog: &config.LoginLog{
+			Max:              101,
+			MaxPayloadLength: 202,
+		},
 	})
 
 	conn := request.Req(t).Conn()
@@ -146,6 +150,8 @@ func Test_Server_SingleTenancy_CallsHandlerWithProject(t *testing.T) {
 		assert.Equal(t, p.TOTPSetupTTL, time.Duration(22)*time.Second)
 		assert.Equal(t, p.TicketMax, 99)
 		assert.Equal(t, p.TicketMaxPayloadLength, 177)
+		assert.Equal(t, p.LoginLogMax, 101)
+		assert.Equal(t, p.LoginLogMaxPayloadLength, 202)
 
 		return http.Ok(map[string]int{"over": 9001}), nil
 	})(conn)

@@ -76,7 +76,7 @@ func Test_GetProject_Unknown(t *testing.T) {
 func Test_GetProject_Success(t *testing.T) {
 	withTestDB(func(conn Conn) {
 		conn.MustExec(`
-			insert into authen_projects (id, totp_issuer, totp_max, totp_setup_ttl, totp_secret_length, ticket_max, ticket_max_payload_length, login_log_max, login_log_max_meta_length)
+			insert into authen_projects (id, totp_issuer, totp_max, totp_setup_ttl, totp_secret_length, ticket_max, ticket_max_payload_length, login_log_max, login_log_max_payload_length)
 			values ('p1', 'is1', 93, 121, 39, 49, 1021, 59, 1029)
 		`)
 		p, err := conn.GetProject("p1")
@@ -89,14 +89,14 @@ func Test_GetProject_Success(t *testing.T) {
 		assert.Equal(t, p.TicketMax, 49)
 		assert.Equal(t, p.TicketMaxPayloadLength, 1021)
 		assert.Equal(t, p.LoginLogMax, 59)
-		assert.Equal(t, p.LoginLogMaxMetaLength, 1029)
+		assert.Equal(t, p.LoginLogMaxPayloadLength, 1029)
 	})
 }
 
 func Test_GetUpdatedProjects_None(t *testing.T) {
 	withTestDB(func(conn Conn) {
 		conn.MustExec(`
-			insert into authen_projects (id, updated, totp_issuer, totp_max, totp_setup_ttl, totp_secret_length, ticket_max, ticket_max_payload_length, login_log_max, login_log_max_meta_length)
+			insert into authen_projects (id, updated, totp_issuer, totp_max, totp_setup_ttl, totp_secret_length, ticket_max, ticket_max_payload_length, login_log_max, login_log_max_payload_length)
 			values ('p1', 0, '', 0, 0, 0, 0, 0, 0, 0)
 		`)
 		updated, err := conn.GetUpdatedProjects(time.Now())
@@ -108,7 +108,7 @@ func Test_GetUpdatedProjects_None(t *testing.T) {
 func Test_GetUpdatedProjects_Success(t *testing.T) {
 	withTestDB(func(conn Conn) {
 		conn.MustExec(`
-			insert into authen_projects (id, updated, totp_issuer, totp_max, totp_setup_ttl, totp_secret_length, ticket_max, ticket_max_payload_length, login_log_max, login_log_max_meta_length) values
+			insert into authen_projects (id, updated, totp_issuer, totp_max, totp_setup_ttl, totp_secret_length, ticket_max, ticket_max_payload_length, login_log_max, login_log_max_payload_length) values
 			('p1', unixepoch() - 500, '', 0, 0, 0, 0, 0, 0, 0),
 			('p2', unixepoch() - 200, '', 0, 0, 0, 0, 0, 0, 0),
 			('p3', unixepoch() - 100, '', 0, 0, 0, 0, 0, 0, 0),
@@ -669,14 +669,14 @@ func Test_LoginLogCreate(t *testing.T) {
 			assert.Equal(t, row.String("user_id"), opts.UserId)
 			assert.Equal(t, row.String("project_id"), opts.ProjectId)
 
-			if opts.Meta == nil {
-				assert.Nil(t, row["meta"])
+			if opts.Payload == nil {
+				assert.Nil(t, row["payload"])
 			} else {
-				assert.Bytes(t, row.Bytes("meta"), opts.Meta)
+				assert.Bytes(t, row.Bytes("payload"), opts.Payload)
 			}
 		}
 
-		//no meta
+		//no payload
 		{
 			assertLoginLog(data.LoginLogCreate{
 				Id:        "l1",
@@ -686,29 +686,29 @@ func Test_LoginLogCreate(t *testing.T) {
 			})
 		}
 
-		//meta
+		//payload
 		{
 			assertLoginLog(data.LoginLogCreate{
 				Id:        "l2",
 				Status:    2,
 				UserId:    "u2",
 				ProjectId: uuid.String(),
-				Meta:      []byte("over 9000!"),
+				Payload:   []byte("over 9000!"),
 			})
 		}
 	})
 }
 
 func Test_LoginLogGet(t *testing.T) {
-	assertRecord := func(actual data.LoginLogRecord, id string, status int, metaName string) {
+	assertRecord := func(actual data.LoginLogRecord, id string, status int, payloadName string) {
 		t.Helper()
 		assert.Equal(t, actual.Id, id)
 		assert.Equal(t, actual.Status, status)
-		if metaName == "" {
-			assert.Nil(t, actual.Meta)
+		if payloadName == "" {
+			assert.Nil(t, actual.Payload)
 		} else {
-			meta := (actual.Meta).(map[string]any)
-			assert.Equal(t, meta["name"].(string), metaName)
+			payload := (actual.Payload).(map[string]any)
+			assert.Equal(t, payload["name"].(string), payloadName)
 		}
 	}
 
@@ -722,7 +722,7 @@ func Test_LoginLogGet(t *testing.T) {
 		}
 
 		conn.MustExec(`
-			insert into authen_login_logs (id, project_id, user_id, status, meta, created) values
+			insert into authen_login_logs (id, project_id, user_id, status, payload, created) values
 			('id1', 'p1', 'u1', 1, null, unixepoch() - 100),
 			('id2', 'p1', 'u1', 2, '{"name": "idaho"}', unixepoch() - 110),
 			('id3', 'p1', 'u1', 3, null, unixepoch() - 120),

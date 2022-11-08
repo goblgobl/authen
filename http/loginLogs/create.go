@@ -22,8 +22,8 @@ var (
 				Field(userIdValidation).
 				Field(validation.Int("status"))
 
-	resMax           = http.StaticError(400, codes.RES_LOGIN_LOG_MAX, "maximum number of login logs reached")
-	resMaxMetaLength = http.StaticError(400, codes.RES_LOGIN_LOG_MAX_META_LENGTH, "meta length is exceeds maximum allowed size")
+	resMax              = http.StaticError(400, codes.RES_LOGIN_LOG_MAX, "maximum number of login logs reached")
+	resMaxPayloadLength = http.StaticError(400, codes.RES_LOGIN_LOG_MAX_META_LENGTH, "payload length is exceeds maximum allowed size")
 )
 
 func Create(conn *fasthttp.RequestCtx, env *authen.Env) (http.Response, error) {
@@ -39,27 +39,27 @@ func Create(conn *fasthttp.RequestCtx, env *authen.Env) (http.Response, error) {
 	}
 
 	project := env.Project
-	var meta []byte
-	if p, ok := input["meta"]; ok {
+	var payload []byte
+	if p, ok := input["payload"]; ok {
 		mb, err := json.Marshal(p)
 		if err != nil {
 			// since this unmarshal'd, it should marshal, this is weird
 			// body could have sensitive information...but we do currently store the
-			// meta in plain text. Still not great, but this shouldnt' happen and
+			// payload in plain text. Still not great, but this shouldnt' happen and
 			// if it does, I really want to understand what's goin gon.
-			log.Error("login_log_create_meta").Err(err).String("body", string(body)).Log()
+			log.Error("login_log_create_payload").Err(err).String("body", string(body)).Log()
 			return nil, err
 		}
-		if m := project.LoginLogMaxMetaLength; m > 0 && len(mb) > m {
-			return resMaxMetaLength, nil
+		if m := project.LoginLogMaxPayloadLength; m > 0 && len(mb) > m {
+			return resMaxPayloadLength, nil
 		}
-		meta = mb
+		payload = mb
 	}
 
 	id := uuid.String()
 	result, err := storage.DB.LoginLogCreate(data.LoginLogCreate{
 		Id:        id,
-		Meta:      meta,
+		Payload:   payload,
 		ProjectId: project.Id,
 		Status:    input.Int("status"),
 		UserId:    input.String("user_id"),

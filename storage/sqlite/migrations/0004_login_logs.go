@@ -14,7 +14,7 @@ func Migrate_0004(conn sqlite.Conn) error {
 			project_id text not null,
 			user_id text not null,
 			status int not null,
-			meta blob null,
+			payload blob null,
 			created int not null default(unixepoch())
 	)`); err != nil {
 		return fmt.Errorf("sqlite 0004 authen_login_logs - %w", err)

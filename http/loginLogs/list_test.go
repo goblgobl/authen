@@ -44,8 +44,8 @@ func Test_List_Result(t *testing.T) {
 
 	tests.Factory.LoginLog.Insert("project_id", projectId, "user_id", "u1", "status", 1, "created", now)
 	tests.Factory.LoginLog.Insert("project_id", projectId, "user_id", "u1", "status", 2, "created", now.Add(time.Minute*-10))
-	tests.Factory.LoginLog.Insert("project_id", projectId, "user_id", "u1", "status", 3, "created", now.Add(time.Minute*-20), "meta", "over 9000!")
-	tests.Factory.LoginLog.Insert("project_id", projectId, "user_id", "u1", "status", 4, "created", now.Add(time.Minute*-30), "meta", map[string]int{"over": 9000})
+	tests.Factory.LoginLog.Insert("project_id", projectId, "user_id", "u1", "status", 3, "created", now.Add(time.Minute*-20), "payload", "over 9000!")
+	tests.Factory.LoginLog.Insert("project_id", projectId, "user_id", "u1", "status", 4, "created", now.Add(time.Minute*-30), "payload", map[string]int{"over": 9000})
 	tests.Factory.LoginLog.Insert("project_id", projectId, "status", 6)
 	tests.Factory.LoginLog.Insert("user_id", "u1", "status", 5)
 
@@ -56,20 +56,20 @@ func Test_List_Result(t *testing.T) {
 
 	rows := json.Objects("results")
 	assert.Equal(t, len(rows), 4)
-	assert.Nil(t, rows[0].Object("meta"))
+	assert.Nil(t, rows[0].Object("payload"))
 	assert.Equal(t, rows[0].Int("status"), 1)
 	assert.Timeish(t, rows[0].Time("created"), now)
 
 	assert.Equal(t, rows[1].Int("status"), 2)
-	assert.Nil(t, rows[1].Object("meta"))
+	assert.Nil(t, rows[1].Object("payload"))
 	assert.Timeish(t, rows[1].Time("created"), now.Add(time.Minute*-10))
 
 	assert.Equal(t, rows[2].Int("status"), 3)
-	assert.Equal(t, rows[2].String("meta"), "over 9000!")
+	assert.Equal(t, rows[2].String("payload"), "over 9000!")
 	assert.Timeish(t, rows[2].Time("created"), now.Add(time.Minute*-20))
 
 	assert.Equal(t, rows[3].Int("status"), 4)
-	assert.Equal(t, rows[3].Object("meta").Int("over"), 9000)
+	assert.Equal(t, rows[3].Object("payload").Int("over"), 9000)
 	assert.Timeish(t, rows[3].Time("created"), now.Add(time.Minute*-30))
 
 	assertPage := func(page int, perpage int, statuses ...int) {

@@ -15,7 +15,7 @@ func Migrate_0004(tx pgx.Tx) error {
 			project_id text not null,
 			user_id text not null,
 			status int not null,
-			meta bytea null,
+			payload bytea null,
 			created timestamptz not null default now()
 		)`); err != nil {
 		return fmt.Errorf("pg 0004 migration authen_login_logs - %w", err)

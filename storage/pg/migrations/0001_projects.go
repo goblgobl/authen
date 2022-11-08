@@ -19,7 +19,7 @@ func Migrate_0001(tx pgx.Tx) error {
 			ticket_max int not null,
 			ticket_max_payload_length int not null,
 			login_log_max int not null,
-			login_log_max_meta_length int not null,
+			login_log_max_payload_length int not null,
 			created timestamptz not null default now(),
 			updated timestamptz not null default now()
 		)`); err != nil {

@@ -32,5 +32,10 @@
 	"ticket": {
 		"max": 76,
 		"max_payload_length": 877
+	},
+
+	"login_log": {
+		"max": 11,
+		"max_payload_length": 92
 	}
 }

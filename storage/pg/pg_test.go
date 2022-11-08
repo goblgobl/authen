@@ -104,7 +104,7 @@ func Test_GetProject_Success(t *testing.T) {
 	id := uuid.String()
 	db.MustExec("truncate table authen_projects")
 	db.MustExec(`
-		insert into authen_projects (id, totp_issuer, totp_max, totp_setup_ttl, totp_secret_length, ticket_max, ticket_max_payload_length, login_log_max, login_log_max_meta_length)
+		insert into authen_projects (id, totp_issuer, totp_max, totp_setup_ttl, totp_secret_length, ticket_max, ticket_max_payload_length, login_log_max, login_log_max_payload_length)
 		values ($1, 'goblgobl.com', 84, 124, 38, 49, 1022, 59, 1029)
 	`, id)
 
@@ -118,14 +118,14 @@ func Test_GetProject_Success(t *testing.T) {
 	assert.Equal(t, p.TicketMax, 49)
 	assert.Equal(t, p.TicketMaxPayloadLength, 1022)
 	assert.Equal(t, p.LoginLogMax, 59)
-	assert.Equal(t, p.LoginLogMaxMetaLength, 1029)
+	assert.Equal(t, p.LoginLogMaxPayloadLength, 1029)
 }
 
 func Test_GetUpdatedProjects_None(t *testing.T) {
 	id := uuid.String()
 	db.MustExec("truncate table authen_projects")
 	db.MustExec(`
-		insert into authen_projects (id, updated, totp_issuer, totp_max, totp_setup_ttl, totp_secret_length, ticket_max, ticket_max_payload_length, login_log_max, login_log_max_meta_length)
+		insert into authen_projects (id, updated, totp_issuer, totp_max, totp_setup_ttl, totp_secret_length, ticket_max, ticket_max_payload_length, login_log_max, login_log_max_payload_length)
 		values ($1, now() - interval '1 second', '', 0, 0, 0, 0, 0, 0, 0)
 	`, id)
 	updated, err := db.GetUpdatedProjects(time.Now())
@@ -137,7 +137,7 @@ func Test_GetUpdatedProjects_Success(t *testing.T) {
 	id1, id2, id3, id4 := uuid.String(), uuid.String(), uuid.String(), uuid.String()
 	db.MustExec("truncate table authen_projects")
 	db.MustExec(`
-		insert into authen_projects (id, updated, totp_issuer, totp_max, totp_setup_ttl, totp_secret_length, ticket_max, ticket_max_payload_length, login_log_max, login_log_max_meta_length) values
+		insert into authen_projects (id, updated, totp_issuer, totp_max, totp_setup_ttl, totp_secret_length, ticket_max, ticket_max_payload_length, login_log_max, login_log_max_payload_length) values
 		($1, now() - interval '500 second', '', 0, 0, 0, 0, 0, 0, 0),
 		($2, now() - interval '200 second', '', 0, 0, 0, 0, 0, 0, 0),
 		($3, now() - interval '100 second', '', 0, 0, 0, 0, 0, 0, 0),
@@ -690,14 +690,14 @@ func Test_LoginLogCreate(t *testing.T) {
 		assert.Equal(t, row.String("user_id"), opts.UserId)
 		assert.Equal(t, row.String("project_id"), opts.ProjectId)
 
-		if opts.Meta == nil {
-			assert.Nil(t, row["meta"])
+		if opts.Payload == nil {
+			assert.Nil(t, row["payload"])
 		} else {
-			assert.Bytes(t, row.Bytes("meta"), opts.Meta)
+			assert.Bytes(t, row.Bytes("payload"), opts.Payload)
 		}
 	}
 
-	//no meta
+	//no payload
 	{
 		assertLoginLog(data.LoginLogCreate{
 			Id:        uuid.String(),
@@ -707,28 +707,28 @@ func Test_LoginLogCreate(t *testing.T) {
 		})
 	}
 
-	//meta
+	//payload
 	{
 		assertLoginLog(data.LoginLogCreate{
 			Id:        uuid.String(),
 			Status:    2,
 			UserId:    "u2",
 			ProjectId: uuid.String(),
-			Meta:      []byte("over 9000!"),
+			Payload:   []byte("over 9000!"),
 		})
 	}
 }
 
 func Test_LoginLogGet(t *testing.T) {
-	assertRecord := func(actual data.LoginLogRecord, id string, status int, metaName string) {
+	assertRecord := func(actual data.LoginLogRecord, id string, status int, payloadName string) {
 		t.Helper()
 		assert.Equal(t, actual.Id, id)
 		assert.Equal(t, actual.Status, status)
-		if metaName == "" {
-			assert.Nil(t, actual.Meta)
+		if payloadName == "" {
+			assert.Nil(t, actual.Payload)
 		} else {
-			meta := (actual.Meta).(map[string]any)
-			assert.Equal(t, meta["name"].(string), metaName)
+			payload := (actual.Payload).(map[string]any)
+			assert.Equal(t, payload["name"].(string), payloadName)
 		}
 	}
 
@@ -747,7 +747,7 @@ func Test_LoginLogGet(t *testing.T) {
 	id1, id2, id3 := uuid.String(), uuid.String(), uuid.String()
 	id4, id5, id6 := uuid.String(), uuid.String(), uuid.String()
 	db.MustExec(`
-		insert into authen_login_logs (id, project_id, user_id, status, meta, created) values
+		insert into authen_login_logs (id, project_id, user_id, status, payload, created) values
 		($1, $7, 'u1', 1, null, now() - interval '100 seconds'),
 		($2, $7, 'u1', 2, '{"name": "idaho"}', now() - interval '110 seconds'),
 		($3, $7, 'u1', 3, null, now() - interval '120 seconds'),

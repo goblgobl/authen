@@ -31,17 +31,17 @@ func init() {
 	f.DB = storage.DB.(f.SQLStorage)
 	Factory.Project = f.NewTable("authen_projects", func(args f.KV) f.KV {
 		return f.KV{
-			"id":                        args.UUID("id", uuid.String()),
-			"totp_max":                  args.Int("totp_max", 100),
-			"totp_issuer":               args.String("totp_issuer", ""),
-			"totp_setup_ttl":            args.Int("totp_setup_ttl", 120),
-			"totp_secret_length":        args.Int("totp_secret_length", 32),
-			"ticket_max":                args.Int("ticket_max", 100),
-			"ticket_max_payload_length": args.Int("ticket_max_payload_length", 128),
-			"login_log_max":             args.Int("login_log_max", 100),
-			"login_log_max_meta_length": args.Int("login_log_max_meta_length", 128),
-			"created":                   args.Time("created", time.Now()),
-			"updated":                   args.Time("updated", time.Now()),
+			"id":                           args.UUID("id", uuid.String()),
+			"totp_max":                     args.Int("totp_max", 100),
+			"totp_issuer":                  args.String("totp_issuer", ""),
+			"totp_setup_ttl":               args.Int("totp_setup_ttl", 120),
+			"totp_secret_length":           args.Int("totp_secret_length", 32),
+			"ticket_max":                   args.Int("ticket_max", 100),
+			"ticket_max_payload_length":    args.Int("ticket_max_payload_length", 128),
+			"login_log_max":                args.Int("login_log_max", 100),
+			"login_log_max_payload_length": args.Int("login_log_max_payload_length", 128),
+			"created":                      args.Time("created", time.Now()),
+			"updated":                      args.Time("updated", time.Now()),
 		}
 	})
 
@@ -103,13 +103,13 @@ func init() {
 	})
 
 	Factory.LoginLog = f.NewTable("authen_login_logs", func(args f.KV) f.KV {
-		var meta *[]byte
-		if m, ok := args["meta"]; ok {
+		var payload *[]byte
+		if m, ok := args["payload"]; ok {
 			m, err := json.Marshal(m)
 			if err != nil {
 				panic(err)
 			}
-			meta = &m
+			payload = &m
 		}
 
 		return f.KV{
@@ -117,7 +117,7 @@ func init() {
 			"project_id": args.UUID("project_id", uuid.String()),
 			"user_id":    args.String("user_id", uuid.String()),
 			"status":     args.Int("status", 0),
-			"meta":       meta,
+			"payload":    payload,
 			"created":    args.Time("created", time.Now()),
 		}
 	})

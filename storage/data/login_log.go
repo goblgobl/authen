@@ -18,7 +18,7 @@ type LoginLogCreate struct {
 	ProjectId string
 	UserId    string
 	Status    int
-	Meta      []byte
+	Payload   []byte
 }
 
 type LoginLogCreateResult struct {
@@ -35,7 +35,7 @@ type LoginLogGet struct {
 type LoginLogRecord struct {
 	Id      string    `json:"id"`
 	Status  int       `json:"status"`
-	Meta    any       `json:"meta",omitempty`
+	Payload any       `json:"payload",omitempty`
 	Created time.Time `json:"created"`
 }
 

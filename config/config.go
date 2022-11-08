@@ -24,6 +24,7 @@ type Config struct {
 	HTTP                   HTTP              `json:"http"`
 	TOTP                   *TOTP             `json:"totp"`
 	Ticket                 *Ticket           `json:"ticket"`
+	LoginLog               *LoginLog         `json:"login_log"`
 	Log                    log.Config        `json:"log"`
 	Storage                storage.Config    `json:"storage"`
 	Validation             validation.Config `json:"validation"`
@@ -41,6 +42,11 @@ type TOTP struct {
 }
 
 type Ticket struct {
+	Max              int `json:"max"`
+	MaxPayloadLength int `json:"max_payload_length"`
+}
+
+type LoginLog struct {
 	Max              int `json:"max"`
 	MaxPayloadLength int `json:"max_payload_length"`
 }
@@ -92,6 +98,14 @@ func Configure(filePath string) (Config, error) {
 	}
 	if !config.MultiTenancy && ticket == nil {
 		config.Ticket = new(Ticket)
+	}
+
+	loginLog := config.LoginLog
+	if config.MultiTenancy && loginLog != nil {
+		log.Warn("multi_tenancy_login_log").String("details", "'login_log' configuration settings are ignored when multi_tenancy=true").Log()
+	}
+	if !config.MultiTenancy && loginLog == nil {
+		config.LoginLog = new(LoginLog)
 	}
 
 	if config.DBCleanFrequency == nil {

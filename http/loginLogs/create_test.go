@@ -48,14 +48,14 @@ func Test_Create_Max(t *testing.T) {
 		Post(Create).ExpectInvalid(102012)
 }
 
-func Test_Create_Meta_Length(t *testing.T) {
-	env := authen.BuildEnv().LoginLogMaxMetaLength(10).Env()
+func Test_Create_Payload_Length(t *testing.T) {
+	env := authen.BuildEnv().LoginLogMaxPayloadLength(10).Env()
 
 	request.ReqT(t, env).
 		Body(map[string]any{
 			"user_id": "id",
 			"status":  1,
-			"meta":    map[string]int{"over": 9000},
+			"payload": map[string]int{"over": 9000},
 		}).
 		Post(Create).
 		ExpectInvalid(102_013)
@@ -64,12 +64,12 @@ func Test_Create_Meta_Length(t *testing.T) {
 		Body(map[string]any{
 			"user_id": "id",
 			"status":  1,
-			"meta":    map[string]int{"over": 9},
+			"payload": map[string]int{"over": 9},
 		}).
 		Post(Create).OK()
 }
 
-func Test_Create_NoMeta(t *testing.T) {
+func Test_Create_NoPayload(t *testing.T) {
 	env := authen.BuildEnv().Env()
 
 	res := request.ReqT(t, env).
@@ -83,7 +83,7 @@ func Test_Create_NoMeta(t *testing.T) {
 	assert.Equal(t, len(id), 36)
 
 	row := tests.Row("select * from authen_login_logs where id = $1", id)
-	assert.Nil(t, row["meta"])
+	assert.Nil(t, row["payload"])
 	assert.Nowish(t, row.Time("created"))
 	assert.Equal(t, row.Int("status"), 99)
 	assert.Equal(t, row.String("user_id"), "user_id_1")

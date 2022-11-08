@@ -84,7 +84,7 @@ func (db DB) GetProject(id string) (*data.Project, error) {
 		select id,
 			totp_issuer, totp_max, totp_setup_ttl, totp_secret_length,
 			ticket_max, ticket_max_payload_length,
-			login_log_max, login_log_max_meta_length
+			login_log_max, login_log_max_payload_length
 		from authen_projects
 		where id = $1
 	`, id)
@@ -116,7 +116,7 @@ func (db DB) GetUpdatedProjects(timestamp time.Time) ([]*data.Project, error) {
 		select id,
 			totp_issuer, totp_max, totp_setup_ttl, totp_secret_length,
 			ticket_max, ticket_max_payload_length,
-			login_log_max, login_log_max_meta_length
+			login_log_max, login_log_max_payload_length
 		from authen_projects where updated > $1
 	`, timestamp)
 	if err != nil {
@@ -344,7 +344,7 @@ func (db DB) TicketDelete(opts data.TicketUse) (data.TicketUseResult, error) {
 func (db DB) LoginLogCreate(opts data.LoginLogCreate) (data.LoginLogCreateResult, error) {
 	id := opts.Id
 	max := opts.Max
-	meta := opts.Meta
+	payload := opts.Payload
 	userId := opts.UserId
 	status := opts.Status
 	projectId := opts.ProjectId
@@ -362,9 +362,9 @@ func (db DB) LoginLogCreate(opts data.LoginLogCreate) (data.LoginLogCreateResult
 	}
 
 	_, err = db.Exec(context.Background(), `
-		insert into authen_login_logs (id, project_id, user_id, status, meta)
+		insert into authen_login_logs (id, project_id, user_id, status, payload)
 		values ($1, $2, $3, $4, $5)
-	`, id, projectId, userId, status, meta)
+	`, id, projectId, userId, status, payload)
 
 	if err != nil {
 		return result, fmt.Errorf("PG.LoginLogCreate - %w", err)
@@ -383,7 +383,7 @@ func (db DB) LoginLogGet(opts data.LoginLogGet) (data.LoginLogGetResult, error) 
 	var result data.LoginLogGetResult
 
 	rows, err := db.Query(context.Background(), `
-		select id, status, meta, created
+		select id, status, payload, created
 		from authen_login_logs
 		where project_id = $1 and user_id = $2
 		order by created desc
@@ -398,18 +398,18 @@ func (db DB) LoginLogGet(opts data.LoginLogGet) (data.LoginLogGetResult, error) 
 	i := 0
 	records := make([]data.LoginLogRecord, limit)
 	for rows.Next() {
-		var meta any
-		var metaBytes *[]byte
+		var payload any
+		var payloadBytes *[]byte
 		var record data.LoginLogRecord
 
-		rows.Scan(&record.Id, &record.Status, &metaBytes, &record.Created)
-		if metaBytes != nil {
+		rows.Scan(&record.Id, &record.Status, &payloadBytes, &record.Created)
+		if payloadBytes != nil {
 			//rather not do this here, but it's better for our handler, so...
-			if err := json.Unmarshal(*metaBytes, &meta); err != nil {
+			if err := json.Unmarshal(*payloadBytes, &payload); err != nil {
 				// very weird, as we've been able to deal with this as json so far
-				log.Error("login_record_meta").Err(err).String("meta", string(*metaBytes)).Log()
+				log.Error("login_record_payload").Err(err).String("payload", string(*payloadBytes)).Log()
 			}
-			record.Meta = meta
+			record.Payload = payload
 		}
 		records[i] = record
 		i += 1
@@ -498,26 +498,26 @@ func scanProject(row pg.Row) (*data.Project, error) {
 	var id, totpIssuer string
 	var totpMax, totpSetupTTL, totpSecretLength int
 	var ticketMax, ticketMaxPayloadLength int
-	var loginLogMax, loginLogMaxMetaLength int
+	var loginLogMax, loginLogMaxPayloadLength int
 
 	err := row.Scan(&id,
 		&totpIssuer, &totpMax, &totpSetupTTL, &totpSecretLength,
 		&ticketMax, &ticketMaxPayloadLength,
-		&loginLogMax, &loginLogMaxMetaLength)
+		&loginLogMax, &loginLogMaxPayloadLength)
 
 	if err != nil {
 		return nil, fmt.Errorf("PG.scanProject - %w", err)
 	}
 
 	return &data.Project{
-		Id:                     id,
-		TOTPMax:                totpMax,
-		TOTPIssuer:             totpIssuer,
-		TOTPSetupTTL:           totpSetupTTL,
-		TOTPSecretLength:       totpSecretLength,
-		TicketMax:              ticketMax,
-		TicketMaxPayloadLength: ticketMaxPayloadLength,
-		LoginLogMax:            loginLogMax,
-		LoginLogMaxMetaLength:  loginLogMaxMetaLength,
+		Id:                       id,
+		TOTPMax:                  totpMax,
+		TOTPIssuer:               totpIssuer,
+		TOTPSetupTTL:             totpSetupTTL,
+		TOTPSecretLength:         totpSecretLength,
+		TicketMax:                ticketMax,
+		TicketMaxPayloadLength:   ticketMaxPayloadLength,
+		LoginLogMax:              loginLogMax,
+		LoginLogMaxPayloadLength: loginLogMaxPayloadLength,
 	}, nil
 }

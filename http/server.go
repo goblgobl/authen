@@ -96,14 +96,17 @@ func loadMultiTenancyEnv(conn *fasthttp.RequestCtx) (*authen.Env, http.Response,
 func createSingleTenancyLoader(config config.Config) func(conn *fasthttp.RequestCtx) (*authen.Env, http.Response, error) {
 	totp := config.TOTP
 	ticket := config.Ticket
+	loginLog := config.LoginLog
 	project := authen.NewProject(&data.Project{
-		Id:                     "00000000-00000000-00000000-00000000",
-		TOTPMax:                totp.Max,
-		TOTPIssuer:             totp.Issuer,
-		TOTPSetupTTL:           totp.SetupTTL,
-		TOTPSecretLength:       totp.SecretLength,
-		TicketMax:              ticket.Max,
-		TicketMaxPayloadLength: ticket.MaxPayloadLength,
+		Id:                       "00000000-00000000-00000000-00000000",
+		TOTPMax:                  totp.Max,
+		TOTPIssuer:               totp.Issuer,
+		TOTPSetupTTL:             totp.SetupTTL,
+		TOTPSecretLength:         totp.SecretLength,
+		TicketMax:                ticket.Max,
+		TicketMaxPayloadLength:   ticket.MaxPayloadLength,
+		LoginLogMax:              loginLog.Max,
+		LoginLogMaxPayloadLength: loginLog.MaxPayloadLength,
 	}, false)
 
 	return func(conn *fasthttp.RequestCtx) (*authen.Env, http.Response, error) {
