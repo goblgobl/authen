@@ -9,7 +9,6 @@ import (
 	"encoding/hex"
 	"io"
 	"math/rand"
-	"regexp"
 	"time"
 
 	"src.goblgobl.com/authen/storage"
@@ -84,40 +83,10 @@ func HexKey() string {
 	return h
 }
 
-type TestableDB interface {
-	Placeholder(i int) string
-	IsNotFound(err error) bool
-	RowToMap(sql string, args ...any) (typed.Typed, error)
-	RowsToMap(sql string, args ...any) ([]typed.Typed, error)
-}
-
-var PlaceholderPattern = regexp.MustCompile(`\$(\d+)`)
-
 func Row(sql string, args ...any) typed.Typed {
-	db := storage.DB.(TestableDB)
-	// no one's going to like this, but not sure how else to deal with it
-	if db.Placeholder(0) == "?1" {
-		sql = PlaceholderPattern.ReplaceAllString(sql, "?$1")
-	}
-	row, err := db.RowToMap(sql, args...)
-	if err != nil {
-		if db.IsNotFound(err) {
-			return nil
-		}
-		panic(err)
-	}
-	return row
+	return tests.Row(storage.DB.(tests.TestableDB), sql, args...)
 }
 
 func Rows(sql string, args ...any) []typed.Typed {
-	db := storage.DB.(TestableDB)
-	// no one's going to like this, but not sure how else to deal with it
-	if db.Placeholder(0) == "?1" {
-		sql = PlaceholderPattern.ReplaceAllString(sql, "?$1")
-	}
-	rows, err := db.RowsToMap(sql, args...)
-	if err != nil {
-		panic(err)
-	}
-	return rows
+	return tests.Rows(storage.DB.(tests.TestableDB), sql, args...)
 }

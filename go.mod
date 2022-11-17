@@ -1,6 +1,6 @@
 module src.goblgobl.com/authen
 
-go 1.18
+go 1.19
 
 // replace src.goblgobl.com/utils => ../utils
 // replace src.goblgobl.com/tests => ../tests
@@ -12,7 +12,7 @@ require (
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
 	github.com/valyala/fasthttp v1.41.0
 	github.com/xlzd/gotp v0.0.0-20220915034741-1546cf172da8
-	src.goblgobl.com/tests v0.0.3
+	src.goblgobl.com/tests v0.0.4
 	src.goblgobl.com/utils v0.0.4
 )
 
