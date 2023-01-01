@@ -23,8 +23,8 @@ t_pg:
 .PHONY: t_cr
 t_cr:
 	@printf "\nrunning tests against cockroachdb\n"
-	@psql $${GOBL_TEST_PG:-postgres://root@localhost:26257/} --quiet -c "drop database gobl_test" || true
-	@psql $${GOBL_TEST_PG:-postgres://root@localhost:26257/} --quiet -c "create database gobl_test"
+	@psql $${GOBL_TEST_CR:-postgres://root@localhost:26257/} --quiet -c "drop database gobl_test" || true
+	@psql $${GOBL_TEST_CR:-postgres://root@localhost:26257/} --quiet -c "create database gobl_test"
 	@GOBL_TEST_STORAGE=cockroach go test -count=1 ./... -run "${F}" \
 		| grep -v "no tests to run" \
 		| grep -v "no test files"

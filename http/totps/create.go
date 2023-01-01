@@ -19,12 +19,12 @@ import (
 )
 
 var (
-	createValidation = validation.Input().
-				Field(keyValidation).
-				Field(typeValidation).
-				Field(userIdValidation).
-				Field(validation.String("account").Required().Length(1, 100)).
-				Field(validation.String("issuer").Length(1, 100))
+	createValidation = validation.Object().
+				Field("key", keyValidation).
+				Field("type", typeValidation).
+				Field("user_id", userIdValidation).
+				Field("account", validation.String().Required().Length(1, 100)).
+				Field("issuer", validation.String().Length(1, 100))
 
 	resMax = http.StaticError(400, codes.RES_TOTP_MAX, "maximum number of TOTPs reached")
 )

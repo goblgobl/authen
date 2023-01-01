@@ -13,10 +13,10 @@ import (
 )
 
 var (
-	listValidation = validation.Input().
-		Field(userIdValidation).
-		Field(validation.Int("page").Min(1).Default(1)).
-		Field(validation.Int("perpage").Min(1).Max(100).Default(10))
+	listValidation = validation.Object().
+		Field("user_id", userIdValidation).
+		Field("page", validation.Int().Min(1).Default(1)).
+		Field("perpage", validation.Int().Min(1).Max(100).Default(10))
 )
 
 func List(conn *fasthttp.RequestCtx, env *authen.Env) (http.Response, error) {

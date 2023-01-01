@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	deleteValidation = validation.Input().Field(ticketValidation)
+	deleteValidation = validation.Object().Field("ticket", ticketValidation)
 )
 
 func Delete(conn *fasthttp.RequestCtx, env *authen.Env) (http.Response, error) {

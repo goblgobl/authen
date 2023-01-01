@@ -11,10 +11,10 @@ import (
 )
 
 var (
-	deleteValidation = validation.Input().
-		Field(typeValidation).
-		Field(userIdValidation).
-		Field(validation.Bool("all_types"))
+	deleteValidation = validation.Object().
+		Field("type", typeValidation).
+		Field("user_id", userIdValidation).
+		Field("all_types", validation.Bool())
 )
 
 func Delete(conn *fasthttp.RequestCtx, env *authen.Env) (http.Response, error) {

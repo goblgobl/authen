@@ -76,7 +76,7 @@ func handler() func(ctx *fasthttp.RequestCtx) {
 }
 
 func loadMultiTenancyEnv(conn *fasthttp.RequestCtx) (*authen.Env, http.Response, error) {
-	projectId := conn.Request.Header.PeekBytes([]byte("Gobl-Project"))
+	projectId := conn.Request.Header.PeekBytes([]byte("Project"))
 	if projectId == nil {
 		return nil, resMissingProjectHeader, nil
 	}

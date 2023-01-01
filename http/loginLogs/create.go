@@ -18,9 +18,9 @@ import (
 )
 
 var (
-	createValidation = validation.Input().
-				Field(userIdValidation).
-				Field(validation.Int("status"))
+	createValidation = validation.Object().
+				Field("user_id", userIdValidation).
+				Field("status", statusValidation)
 
 	resMax              = http.StaticError(400, codes.RES_LOGIN_LOG_MAX, "maximum number of login logs reached")
 	resMaxPayloadLength = http.StaticError(400, codes.RES_LOGIN_LOG_MAX_META_LENGTH, "payload length is exceeds maximum allowed size")

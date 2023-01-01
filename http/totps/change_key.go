@@ -13,11 +13,11 @@ import (
 )
 
 var (
-	changeKeyValidation = validation.Input().
-		Field(typeValidation).
-		Field(userIdValidation).
-		Field(keyValidation).
-		Field(newKeyValidation)
+	changeKeyValidation = validation.Object().
+		Field("type", typeValidation).
+		Field("user_id", userIdValidation).
+		Field("key", keyValidation).
+		Field("new_key", keyValidation)
 )
 
 func ChangeKey(conn *fasthttp.RequestCtx, env *authen.Env) (http.Response, error) {

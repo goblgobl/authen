@@ -16,12 +16,12 @@ import (
 )
 
 var (
-	verifyValidation = validation.Input().
-		Field(keyValidation).
-		Field(typeValidation).
-		Field(codeValidation).
-		Field(userIdValidation).
-		Field(validation.Bool("pending"))
+	verifyValidation = validation.Object().
+		Field("key", keyValidation).
+		Field("type", typeValidation).
+		Field("code", codeValidation).
+		Field("user_id", userIdValidation).
+		Field("pending", validation.Bool())
 )
 
 func Verify(conn *fasthttp.RequestCtx, env *authen.Env) (http.Response, error) {

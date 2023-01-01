@@ -22,9 +22,9 @@ import (
 )
 
 var (
-	createValidation = validation.Input().
-				Field(validation.Int("ttl").Min(0).Default(60)).
-				Field(validation.Int("uses").Min(0).Default(1))
+	createValidation = validation.Object().
+				Field("ttl", ttlValidation).
+				Field("uses", usesValidation)
 
 	resMax              = http.StaticError(400, codes.RES_TICKET_MAX, "maximum number of tickets reached")
 	resMaxPayloadLength = http.StaticError(400, codes.RES_TICKET_MAX_PAYLOAD_LENGTH, "payload length is exceeds maximum allowed size")

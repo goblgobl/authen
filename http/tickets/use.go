@@ -17,7 +17,7 @@ import (
 )
 
 var (
-	useValidation = validation.Input().Field(ticketValidation)
+	useValidation = validation.Object().Field("ticket", ticketValidation)
 	resNotFound   = http.StaticError(404, codes.RES_TICKET_NOT_FOUND, "ticket not found")
 )
 
