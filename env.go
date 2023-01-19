@@ -24,6 +24,8 @@ type Env struct {
 	// and rid (request id) fields
 	Logger log.Logger
 
+	requestLogger log.Logger
+
 	// records validation errors
 	Validator *validation.Result
 }
@@ -61,6 +63,15 @@ func (e *Env) Error(ctx string) log.Logger {
 
 func (e *Env) Fatal(ctx string) log.Logger {
 	return e.Logger.Fatal(ctx)
+}
+
+func (e *Env) Request(route string) log.Logger {
+	logger := log.Checkout().
+		Field(e.Project.logField).
+		String("rid", e.requestId).
+		Request(route)
+	e.requestLogger = logger
+	return logger
 }
 
 func (e *Env) Release() {

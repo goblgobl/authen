@@ -14,8 +14,8 @@ require (
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
 	github.com/valyala/fasthttp v1.43.0
 	github.com/xlzd/gotp v0.0.0-20220915034741-1546cf172da8
-	src.goblgobl.com/tests v0.0.5
-	src.goblgobl.com/utils v0.0.5
+	src.goblgobl.com/tests v0.0.6
+	src.goblgobl.com/utils v0.0.6
 )
 
 require (

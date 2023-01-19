@@ -14,7 +14,7 @@ import (
 
 func Test_List_InvalidData(t *testing.T) {
 	request.ReqT(t, authen.BuildEnv().Env()).
-		Query(map[string]string{
+		QueryMap(map[string]string{
 			"page":    "a",
 			"perpage": "b",
 		}).
@@ -22,7 +22,7 @@ func Test_List_InvalidData(t *testing.T) {
 		ExpectValidation("user_id", 1001, "page", 1005, "perpage", 1005)
 
 	request.ReqT(t, authen.BuildEnv().Env()).
-		Query(map[string]string{
+		QueryMap(map[string]string{
 			"user_id": strings.Repeat("a", 101),
 			"page":    "0",
 			"perpage": "-1",
@@ -33,7 +33,7 @@ func Test_List_InvalidData(t *testing.T) {
 
 func Test_List_EmptyResult(t *testing.T) {
 	json := request.ReqT(t, authen.BuildEnv().Env()).
-		Query(map[string]string{"user_id": "hi"}).
+		QueryMap(map[string]string{"user_id": "hi"}).
 		Get(List).OK().Json
 	assert.Equal(t, len(json.Objects("results")), 0)
 }
@@ -51,7 +51,7 @@ func Test_List_Result(t *testing.T) {
 
 	env := authen.BuildEnv().ProjectId(projectId).Env()
 	json := request.ReqT(t, env).
-		Query(map[string]string{"user_id": "u1"}).
+		QueryMap(map[string]string{"user_id": "u1"}).
 		Get(List).OK().Json
 
 	rows := json.Objects("results")
@@ -74,7 +74,7 @@ func Test_List_Result(t *testing.T) {
 
 	assertPage := func(page int, perpage int, statuses ...int) {
 		json := request.ReqT(t, env).
-			Query(map[string]string{
+			QueryMap(map[string]string{
 				"user_id": "u1",
 				"page":    strconv.Itoa(page),
 				"perpage": strconv.Itoa(perpage),

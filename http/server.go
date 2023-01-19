@@ -69,7 +69,7 @@ func handler() func(ctx *fasthttp.RequestCtx) {
 
 	// catch all
 	r.NotFound = func(ctx *fasthttp.RequestCtx) {
-		resNotFoundPath.Write(ctx)
+		resNotFoundPath.Write(ctx, log.Noop{})
 	}
 
 	return r.Handler
